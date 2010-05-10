@@ -58,30 +58,48 @@ class Path(str):
     self.head -- the dirname of the path
     self.tail -- the basename of the path
     '''
-    def __init__(self, p):
-        super(Path, self).__init__(p)
-        head, tail = os.path.split(p)
+    def __init__(self, s):
+        super(Path, self).__init__(s)
+        self.rebuild(s)
+    def rebuild(self, s):
+        head, tail = os.path.split(s)
         if not tail:
             head, tail = os.path.split(head)
+        self.str = s
         self.real = os.path.join(os.path.realpath(head), tail)
         self.head = head
         self.tail = tail
     def __eq__(self, other):
+        if type(other) == str:
+            return self.str == other
         return self.real == other.real
     def __ne__(self, other):
+        if type(other) == str:
+            return self.str != other
         return self.real != other.real
     def __lt__(self, other):
+        if type(other) == str:
+            return self.str <  other
         return self.real <  other.real
     def __le__(self, other):
+        if type(other) == str:
+            return self.str <= other
         return self.real <= other.real
     def __gt__(self, other):
+        if type(other) == str:
+            return self.str >  other
         return self.real >  other.real
     def __ge__(self, other):
+        if type(other) == str:
+            return self.str >= other
         return self.real >= other.real
     def __cmp__(self, other):
+        if type(other) == str:
+            return self.str.__cmd__(other)
         return self.real.__cmd__(other.real)
     def __hash__(self):
         return self.real.__hash__()
+
 
 ##############################################################################
 # Wrapper functions for manipulation the file system
@@ -113,7 +131,10 @@ def remove_recursive(top):
             os.remove(os.path.join(root, name))
         for name in dirs:
             os.rmdir(os.path.join(root, name))
-    os.rmdir(top)
+    if os.path.isdir(top):
+        os.rmdir(top)
+    else:
+        os.remove(top)
 
 def path_remove(path, recursive=False):
     if os.path.isdir(path):
