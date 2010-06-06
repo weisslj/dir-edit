@@ -399,7 +399,7 @@ is omitted, the current one is used.'''
     retval = subprocess.call(command, shell=True)
 
     if retval != 0:
-        error('editor command failed: %s', comand)
+        error('editor command failed: %s', command)
 
     f = open(tmpfile, 'r')
     new_file_list = [l.rstrip('\n') for l in f]
