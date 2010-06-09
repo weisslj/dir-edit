@@ -6,7 +6,7 @@ from distutils.core import setup
 setup(name='dir-edit',
       version='1.0',
       description='Rename or remove files in a directory using an editor (e.g. vi)',
-      author='Johannes Weißl',
+      author=u'Johannes Weißl',
       author_email='jargon@molb.org',
       url='http://github.com/weisslj/dir-edit',
       license='GNU GPL v3',

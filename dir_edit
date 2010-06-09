@@ -319,7 +319,10 @@ names. After saving, the script checks the file for consistency and
 detects rename loops or paths and finally performs the changes. If DIR
 is omitted, the current one is used.'''
 
-    default_editor = 'vi'
+    if os.name == 'nt':
+        default_editor = 'notepad'
+    else:
+        default_editor = 'vi'
     editor = os.getenv('EDITOR', default_editor)
 
     parser = OptionParser(usage=usage, version=version, description=desc)
