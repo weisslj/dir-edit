@@ -5,8 +5,7 @@ from distutils.core import setup
 
 setup(name='dir-edit',
       version='1.0',
-      description='Chooses a file from a directory. '\
-                  'Very handy to re-watch tv series!',
+      description='Rename or remove files in a directory using an editor (e.g. vi)',
       author='Johannes Weißl',
       author_email='jargon@molb.org',
       url='http://github.com/weisslj/dir-edit',
