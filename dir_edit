@@ -59,7 +59,6 @@ class Path(str):
     self.tail -- the basename of the path
     '''
     def __init__(self, s):
-        str.__init__(s)
         self.rebuild(s)
     def rebuild(self, s):
         head, tail = os.path.split(s)
