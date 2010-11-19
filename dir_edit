@@ -463,7 +463,7 @@ is omitted, the current one is used.'''
             reduce(rename_func, reversed(p))
 
         for c in cycles.values():
-            t = os.path.join(tmpdir, 'c_' + os.path.basename(c[0]))
+            t = Path(os.path.join(tmpdir, 'c_' + c[0].tail))
             path_rename(c[0], t)
             c[0] = t
             reduce(rename_func, reversed(c))
