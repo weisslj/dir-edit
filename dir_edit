@@ -228,8 +228,6 @@ def check_input_path(p):
     '''Return true if p is a valid input path, false otherwise.'''
     if not p or not os.path.exists(p):
         return False
-    if os.path.isdir(p) and os.listdir(p) != []:
-        return False
     return True
 
 def sanitize_file_list(lst):
