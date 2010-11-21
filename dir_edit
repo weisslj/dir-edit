@@ -292,8 +292,11 @@ def decompose_mapping(graph):
     return paths, cycles
 
 
-def main(argv=sys.argv):
+def main(argv=None):
     '''Main function.'''
+
+    if not argv:
+        argv = sys.argv
 
     global prog_name
     global simulate
