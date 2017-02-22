@@ -15,6 +15,8 @@ import locale
 import subprocess
 from optparse import OptionParser
 
+class Error(Exception):
+    pass
 
 ##############################################################################
 # Logging functions
@@ -30,7 +32,7 @@ def warn(msg, *args, **kwargs):
 def error(msg, *args, **kwargs):
     '''Output an error message to stderr and exit.'''
     warn(msg, *args, **kwargs)
-    sys.exit(1)
+    raise Error(msg % args)
 
 def shellquote(s):
     '''Return a quoted version of s suitable for a sh-like shell.'''
@@ -292,11 +294,8 @@ def decompose_mapping(graph):
     return paths, cycles
 
 
-def main(argv=None):
+def main(args=None):
     '''Main function.'''
-
-    if not argv:
-        argv = sys.argv
 
     global prog_name
     global simulate
@@ -335,6 +334,8 @@ is omitted, the current one is used.'''
         help='use CMD to edit dirfile (default: $EDITOR or vi)')
     parser.add_option('-i', '--input', metavar='FILE',
         help='FILE containing paths to be edited (FILES, -a, -m, -n and -r ignored)')
+    parser.add_option('-o', '--output', metavar='FILE',
+        help='FILE containing paths after being edited (-e is ignored)')
     parser.add_option('-m', '--mangle-newlines', action='store_true',
         default=False, help='replace newlines in files through blanks')
     parser.add_option('-n', '--numeric-sort', action='store_true',
@@ -348,7 +349,7 @@ is omitted, the current one is used.'''
     parser.add_option('-v', '--verbose', action='store_true', default=False,
         help='output filesystem modifications to stdout')
 
-    (options, args) = parser.parse_args(argv[1:])
+    (options, args) = parser.parse_args(args)
     prog_name = parser.get_prog_name()
 
     verbose = options.verbose
@@ -392,21 +393,28 @@ is omitted, the current one is used.'''
                 error('file names with newlines are not supported, try -m!')
 
     tmpdir = tempfile.mkdtemp(prefix='dir_edit-')
-    tmpfile = os.path.join(tmpdir, 'file_list')
-    nl_r = re.compile(r'[\n\r]')
-    f = open(tmpfile, 'w')
-    f.write(''.join([nl_r.sub(' ', e) + '\n' for e in file_list]))
-    f.close()
 
-    command = editor + ' ' + shellquote(tmpfile)
-    retval = subprocess.call(command, shell=True)
+    if options.output:
+        try:
+            new_file_list = read_input_file(options.output)
+        except IOError, (errno, strerror):
+            error('error reading output file: %s', strerror)
+    else:
+        tmpfile = os.path.join(tmpdir, 'file_list')
+        nl_r = re.compile(r'[\n\r]+')
+        f = open(tmpfile, 'w')
+        f.write(''.join([nl_r.sub(' ', e) + '\n' for e in file_list]))
+        f.close()
 
-    if retval != 0:
-        error('editor command failed: %s', command)
+        command = editor + ' ' + shellquote(tmpfile)
+        retval = subprocess.call(command, shell=True)
 
-    f = open(tmpfile, 'r')
-    new_file_list = [l.rstrip('\n') for l in f]
-    f.close()
+        if retval != 0:
+            error('editor command failed: %s', command)
+
+        f = open(tmpfile, 'r')
+        new_file_list = [l.rstrip('\n') for l in f]
+        f.close()
 
     if len(file_list) != len(new_file_list):
         error('new file list has different length than old')
@@ -472,10 +480,12 @@ is omitted, the current one is used.'''
         if need_tmpdir:
             fslog('rmdir %s', tmpdir)
 
-    os.remove(tmpfile)
+    if not options.output:
+        os.remove(tmpfile)
     os.rmdir(tmpdir)
 
-    return 0
-
 if __name__ == '__main__':
-    sys.exit(main())
+    try:
+        main()
+    except Error:
+        sys.exit(1)

@@ -25,4 +25,5 @@ setup(
             'dir_edit=dir_edit:main',
         ],
     },
+    test_suite='dir_edit_test',
 )
