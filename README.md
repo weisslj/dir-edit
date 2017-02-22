@@ -50,21 +50,21 @@ and detects rename loops or paths and finally performs the changes.
 
 ## Examples
 
-1. You don't trust this script (it could accidentally delete all your files):
+You don't trust this script (it could accidentally delete all your files):
 
-       # don't actually perform any modifications
-       dir_edit -vd ./music > LOG
-       # check proposed changes
-       view LOG
-       # perform changes
-       sh LOG
+    # don't actually perform any modifications
+    dir_edit -vd ./music > LOG
+    # check proposed changes
+    view LOG
+    # perform changes
+    sh LOG
 
-2. Rename all pictures with maximum directory depth 2:
+Rename all pictures with maximum directory depth 2:
 
-       # create file list
-       find pics -maxdepth 2 -type f -iregex ".*\.\(jpg\|png\)" > file_list
-       dir_edit -i file_list
+    # create file list
+    find pics -maxdepth 2 -type f -iregex ".*\.\(jpg\|png\)" > file_list
+    dir_edit -i file_list
 
-3. Rename all ogg files in current directory using gedit:
+Rename all ogg files in current directory using gedit:
 
-       dir_edit -e gedit . *.ogg
+    dir_edit -e gedit . *.ogg
