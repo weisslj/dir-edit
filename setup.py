@@ -2,7 +2,7 @@
 
 """A setuptools based setup module."""
 
-from distutils.core import setup
+from setuptools import setup
 
 setup(
     name='dir-edit',
@@ -17,5 +17,12 @@ setup(
         'Programming Language :: Python :: 2.5',
         'Topic :: Utilities',
     ],
-    scripts=['dir_edit'],
+    py_modules=[
+        'dir_edit',
+    ],
+    entry_points={
+        'console_scripts': [
+            'dir_edit=dir_edit:main',
+        ],
+    },
 )
