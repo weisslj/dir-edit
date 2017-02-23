@@ -378,9 +378,9 @@ is omitted, the current one is used.'''
         sanitize_file_list(file_list)
     else:
         if not options.recursive:
-            file_list = read_dir(dir, options.all)
+            file_list = read_dir(os.curdir, options.all)
         else:
-            file_list = read_dir_recursive(dir, options.all)
+            file_list = read_dir_recursive(os.curdir, options.all)
         key = textkey_path if not options.numeric_sort else numkey_path
         file_list.sort(key=key)
 
@@ -447,7 +447,7 @@ is omitted, the current one is used.'''
     if mapping or to_remove:
 
         # log directory change
-        fslog('chdir %s', os.path.realpath(dir))
+        fslog('chdir %s', os.path.realpath(os.curdir))
 
         need_tmpdir = False
         for x in mapping:

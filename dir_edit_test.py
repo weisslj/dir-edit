@@ -29,6 +29,7 @@ class DirEditTestCase(unittest.TestCase):
 
     def setUp(self):
         """Create temporary directories, declare attributes."""
+        self.curdir = os.getcwd()
         self.tmpdir = tempfile.mkdtemp()
         self.tmpdir2 = tempfile.mkdtemp()
         self.original_stdout = None
@@ -40,6 +41,7 @@ class DirEditTestCase(unittest.TestCase):
 
     def tearDown(self):
         """Remove temporary directories."""
+        os.chdir(self.curdir)
         shutil.rmtree(self.tmpdir2)
         shutil.rmtree(self.tmpdir)
 
@@ -67,9 +69,13 @@ class DirEditTestCase(unittest.TestCase):
         """Return sorted list of leaf nodes of self.tmpdir recursively."""
         return sorted(listdir_recursive(self.tmpdir))
 
+    def path_content(self, path):
+        """Return file content or '<dir>' for directories of path relative to self.tmpdir."""
+        return path_content(os.path.join(self.tmpdir, path))
+
     def list_tmpdir_content(self):
         """Like list_tmpdir(), but return list of (path, content) tuples."""
-        return [(path, path_content(path)) for path in self.list_tmpdir()]
+        return [(path, self.path_content(path)) for path in self.list_tmpdir()]
 
     def setup_stdout(self):
         """Replace stdout and stderr with StringIO() for later inspection."""
@@ -90,10 +96,16 @@ class DirEditTestCase(unittest.TestCase):
         sys.stderr.write(self.error)
 
     def dir_edit(self, *args):
+        """Convenience function to call dir_edit.py, restores current directory."""
+        curdir = os.getcwd()
+        self.call_dir_edit(list(args))
+        os.chdir(curdir)
+
+    def call_dir_edit(self, args):
         # Is a method to be overridden in child:
         # pylint: disable=no-self-use
         """Call dir_edit.py main function."""
-        dir_edit.main(list(args))
+        dir_edit.main(args)
 
     def test_empty(self):
         """Raise error if called on empty directory."""
@@ -323,11 +335,19 @@ class DirEditTestCase(unittest.TestCase):
         self.assertEqual([('a', 'a'), ('b', 'b')], self.list_tmpdir_content())
         self.assertRegexpMatches(self.error, 'path b already exists, skip')
 
+    def test_reldir(self):
+        """Check that a relative directory works."""
+        shutil.rmtree(self.tmpdir)
+        self.tmpdir = tempfile.mkdtemp(dir=os.curdir)
+        self.put_files('a')
+        self.dir_edit(self.tmpdir, '-o', self.tmpfile('b'))
+        self.assertEqual(['b'], self.list_tmpdir())
+
 class DirEditDryRunVerboseTestCase(DirEditTestCase):
     """Test dir_edit.py -d -v."""
-    def dir_edit(self, *args):
+    def call_dir_edit(self, args):
         self.setup_stdout()
-        dir_edit.main(['--dry-run', '--verbose'] + list(args))
+        dir_edit.main(['--dry-run', '--verbose'] + args)
         self.restore_stdout()
         for command in self.output.split('\n'):
             subprocess.check_output(command, shell=True)
