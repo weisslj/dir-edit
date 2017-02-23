@@ -32,10 +32,10 @@ class DirEditTestCase(unittest.TestCase):
         self.curdir = os.getcwd()
         self.tmpdir = tempfile.mkdtemp()
         self.tmpdir2 = tempfile.mkdtemp()
-        self.original_stdout = None
-        self.original_stderr = None
-        self.stdout_buffer = None
-        self.stderr_buffer = None
+        self.original_stdout = []
+        self.original_stderr = []
+        self.stdout_buffer = []
+        self.stderr_buffer = []
         self.output = None
         self.error = None
 
@@ -79,19 +79,19 @@ class DirEditTestCase(unittest.TestCase):
 
     def setup_stdout(self):
         """Replace stdout and stderr with StringIO() for later inspection."""
-        self.original_stdout = sys.stdout
-        self.original_stderr = sys.stderr
-        self.stdout_buffer = StringIO()
-        self.stderr_buffer = StringIO()
-        sys.stdout = self.stdout_buffer
-        sys.stderr = self.stderr_buffer
+        self.original_stdout.append(sys.stdout)
+        self.original_stderr.append(sys.stderr)
+        sys.stdout = StringIO()
+        sys.stderr = StringIO()
+        self.stdout_buffer.append(sys.stdout)
+        self.stderr_buffer.append(sys.stderr)
 
     def restore_stdout(self):
         """Restore stdout and stderr and store buffer values for inspection."""
-        self.output = self.stdout_buffer.getvalue()
-        self.error = self.stderr_buffer.getvalue()
-        sys.stdout = self.original_stdout
-        sys.stderr = self.original_stderr
+        self.output = self.stdout_buffer.pop().getvalue()
+        self.error = self.stderr_buffer.pop().getvalue()
+        sys.stdout = self.original_stdout.pop()
+        sys.stderr = self.original_stderr.pop()
         sys.stdout.write(self.output)
         sys.stderr.write(self.error)
 
@@ -347,8 +347,10 @@ class DirEditDryRunVerboseTestCase(DirEditTestCase):
     """Test dir_edit.py -d -v."""
     def call_dir_edit(self, args):
         self.setup_stdout()
-        dir_edit.main(['--dry-run', '--verbose'] + args)
-        self.restore_stdout()
+        try:
+            dir_edit.main(['--dry-run', '--verbose'] + args)
+        finally:
+            self.restore_stdout()
         for command in self.output.split('\n'):
             subprocess.check_output(command, shell=True)
     def test_dry_run(self):
