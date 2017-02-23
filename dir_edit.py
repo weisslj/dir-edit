@@ -357,13 +357,11 @@ is omitted, the current one is used.'''
     dir = args[0] if args else os.curdir
     files = args[1:]
 
-    if not os.path.exists(dir):
-        error('error, directory `%s\' doesn\'t exist', dir)
+    try:
+        os.chdir(dir)
+    except OSError as exc:
+        error('error changing to directory `%s\': %s', dir, exc.strerror)
 
-    if not os.path.isdir(dir):
-        error('error, `%s\' is no directory', dir)
-
-    os.chdir(dir)
     if options.input:
         try:
             file_list = read_input_file(options.input)

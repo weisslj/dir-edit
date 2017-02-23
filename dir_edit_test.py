@@ -124,13 +124,13 @@ class DirEditTestCase(unittest.TestCase):
 
     def test_nonexisting(self):
         """Raise error if directory does not exist."""
-        with self.assertRaisesRegexp(dir_edit.Error, 'directory .* doesn\'t exist'):
+        with self.assertRaisesRegexp(dir_edit.Error, 'No such file or directory'):
             self.dir_edit(os.path.join(self.tmpdir, 'nonexist'))
 
     def test_nodirectory(self):
         """Raise error if path is no directory."""
         self.put_files('file')
-        with self.assertRaisesRegexp(dir_edit.Error, 'is no directory'):
+        with self.assertRaisesRegexp(dir_edit.Error, 'Not a directory'):
             self.dir_edit(os.path.join(self.tmpdir, 'file'))
 
     def test_output(self):
@@ -347,9 +347,9 @@ class DirEditTestCase(unittest.TestCase):
 
     def test_multibyte_error(self):
         """Check that multibyte error message works."""
-        with self.assertRaisesRegexp(dir_edit.Error, 'directory .* doesn\'t exist'):
+        with self.assertRaisesRegexp(dir_edit.Error, 'No such file or directory'):
             self.dir_edit(os.path.join(self.tmpdir, '\xc3\xa4'))
-        with self.assertRaisesRegexp(dir_edit.Error, 'directory .* doesn\'t exist'):
+        with self.assertRaisesRegexp(dir_edit.Error, 'No such file or directory'):
             self.dir_edit(os.path.join(self.tmpdir, '\xe4'))
 
 class DirEditDryRunVerboseTestCase(DirEditTestCase):
