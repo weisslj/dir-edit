@@ -343,6 +343,13 @@ class DirEditTestCase(unittest.TestCase):
         self.dir_edit(self.tmpdir, '-o', self.tmpfile('b'))
         self.assertEqual(['b'], self.list_tmpdir())
 
+    def test_multibyte_error(self):
+        """Check that multibyte error message works."""
+        with self.assertRaisesRegexp(dir_edit.Error, 'directory .* doesn\'t exist'):
+            self.dir_edit(os.path.join(self.tmpdir, '\xc3\xa4'))
+        with self.assertRaisesRegexp(dir_edit.Error, 'directory .* doesn\'t exist'):
+            self.dir_edit(os.path.join(self.tmpdir, '\xe4'))
+
 class DirEditDryRunVerboseTestCase(DirEditTestCase):
     """Test dir_edit.py -d -v."""
     def call_dir_edit(self, args):

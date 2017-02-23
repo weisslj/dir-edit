@@ -23,10 +23,7 @@ class Error(Exception):
 #
 def warn(msg, *args, **kwargs):
     '''Output a warning message to stderr.'''
-    msg = u'%s: %s' % (prog_name, msg % args)
-    if type(msg) == unicode:
-        pref_enc = locale.getpreferredencoding()
-        msg = msg.encode(pref_enc)
+    msg = '%s: %s' % (prog_name, msg % args)
     print >> sys.stderr, msg
 
 def error(msg, *args, **kwargs):
