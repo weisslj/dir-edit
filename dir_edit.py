@@ -93,8 +93,8 @@ class Path(str):
         return self.real >= other.real
     def __cmp__(self, other):
         if type(other) == str:
-            return self.str.__cmd__(other)
-        return self.real.__cmd__(other.real)
+            return self.str.__cmp__(other)
+        return self.real.__cmp__(other.real)
     def __hash__(self):
         return self.real.__hash__()
 
