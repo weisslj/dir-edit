@@ -2,11 +2,11 @@
 
 import sys
 import os
+import errno
 import unittest
 import tempfile
 import shutil
 from StringIO import StringIO
-import distutils.dir_util
 import subprocess
 
 import dir_edit
@@ -22,6 +22,16 @@ def listdir_recursive(top):
 def path_content(path):
     """Return file content or '<dir>' for directories."""
     return '<dir>' if os.path.isdir(path) else open(path).read()
+
+def mkdir_p(path):
+    """Like os.makedirs(), but ignores existing directories."""
+    try:
+        os.makedirs(path)
+    except OSError as exc:
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else:
+            raise
 
 class DirEditTestCase(unittest.TestCase):
     # pylint: disable=too-many-instance-attributes,too-many-public-methods
@@ -49,14 +59,14 @@ class DirEditTestCase(unittest.TestCase):
         """Put files into the temporary directory."""
         for filename in filenames:
             path = os.path.join(self.tmpdir, filename)
-            distutils.dir_util.mkpath(os.path.dirname(path))
+            mkdir_p(os.path.dirname(path))
             open(path, 'w').write(filename)
 
     def put_dirs(self, *dirnames):
         """Put directories into the temporary directory."""
         for dirname in dirnames:
             path = os.path.join(self.tmpdir, dirname)
-            distutils.dir_util.mkpath(path)
+            mkdir_p(path)
 
     def tmpfile(self, *filenames):
         """Create a temporary file with list of filenames, return path."""
