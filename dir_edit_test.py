@@ -259,7 +259,7 @@ class DirEditTestCase(unittest.TestCase):
     # TODO: Fix bug!
     # def test_recursive_fail1(self):
     #     """Test that recursive mode works."""
-    #     self.put_files("x/y/a", 'x/y/b', 'z/c')
+    #     self.put_files('x/y/a', 'x/y/b', 'z/c')
     #     self.dir_edit(self.tmpdir, '-r', '-o', self.tmpfile('a', 'x/y/d', 'q/c'))
     #     self.assertEqual([('a', 'x/y/a'), ('x/y/d', 'x/y/b'), ('q/c', 'z/c')],
     #                      self.list_tmpdir_content())

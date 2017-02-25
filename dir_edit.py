@@ -30,21 +30,21 @@ class Error(Exception):
 # Logging functions
 #
 def warn(msg, *args, **_kwargs):
-    '''Output a warning message to stderr.'''
+    """Output a warning message to stderr."""
     msg = '%s: %s' % (PROG_NAME, msg % args)
     print >> sys.stderr, msg
 
 def error(msg, *args, **kwargs):
-    '''Output an error message to stderr and exit.'''
+    """Output an error message to stderr and exit."""
     warn(msg, *args, **kwargs)
     raise Error(msg % args)
 
 def shellquote(string):
-    '''Return a quoted version of s suitable for a sh-like shell.'''
+    """Return a quoted version of s suitable for a sh-like shell."""
     return "'" + string.replace("'", "'\\''") + "'"
 
 def fslog(msg, *args, **_kwargs):
-    '''Output a shell command to stdout, quoting it's arguments.'''
+    """Output a shell command to stdout, quoting it's arguments."""
     if not VERBOSE:
         return
     msg = msg % tuple(shellquote(x) for x in args)
@@ -53,7 +53,7 @@ def fslog(msg, *args, **_kwargs):
 ##############################################################################
 
 class Path(str):
-    '''Represent a path.
+    """Represent a path.
 
     This class can be used like a string path (os.path.*). As an extension,
     comparisions (or lookups) are refering to the real pathname, e.g.:
@@ -64,7 +64,7 @@ class Path(str):
     self.real -- the os.path.realname of the path
     self.head -- the dirname of the path
     self.tail -- the basename of the path
-    '''
+    """
     def __init__(self, string):
         super(Path, self).__init__(string)
         self.rebuild(string)
@@ -174,10 +174,10 @@ def path_rename(src, dst):
     os.rename(src, dst)
 
 def path_least_common_ancestor(path1, path2):
-    '''Return least common ancestor of Path objects path1 and path2.
+    """Return least common ancestor of Path objects path1 and path2.
     e.g.
     path_least_common_ancestor(Path('a/b/c'), Path('a/b/d')) == '/.../a/b'
-    '''
+    """
     real1, real2 = path1.real, path2.real
     while real1 != real2:
         if len(real1) > len(real2):
@@ -186,11 +186,11 @@ def path_least_common_ancestor(path1, path2):
     return real1
 
 def path_renames(src, dst):
-    '''Rename src to dst, possibly creating needed or removing unneeded
+    """Rename src to dst, possibly creating needed or removing unneeded
     directories. Also handles the case when moving a file to a subdirectory
     with the same name, e.g.:
     mv x x/new_x
-    '''
+    """
     if os.path.exists(dst):
         warn('path %s already exists, skip', dst)
         return
@@ -226,14 +226,14 @@ def rev_redux_renames(dst, src):
 
 NUMKEY_REGEX = re.compile(r'(\s*[+-]?[0-9]+\.?[0-9]*\s*)(.*)')
 def numkey(string):
-    """Return a sort key that works for filenames like "23 - foo"."""
+    """Return a sort key that works for filenames like '23 - foo'."""
     match = NUMKEY_REGEX.match(string)
     if match:
         return float(match.group(1)), locale.strxfrm(match.group(2))
     return (0.0, locale.strxfrm(string))
 
 def path_split_all(path):
-    '''Return a list of path elements, e.g. 'a/b/..//c' -> ['a', 'c'].'''
+    """Return a list of path elements, e.g. 'a/b/..//c' -> ['a', 'c']."""
     return os.path.normpath(path).split(os.sep)
 
 def textkey_path(path):
@@ -241,32 +241,32 @@ def textkey_path(path):
     return tuple(locale.strxfrm(s) for s in path_split_all(path))
 
 def numkey_path(path):
-    """Return a sort key that works for paths like "2/23 - foo"."""
+    """Return a sort key that works for paths like '2/23 - foo'."""
     return tuple(numkey(s) for s in path_split_all(path))
 
 def check_input_path(path):
-    '''Return true if path is a valid input path, false otherwise.'''
+    """Return true if path is a valid input path, false otherwise."""
     if not path or not os.path.exists(path):
         return False
     return True
 
 def sanitize_file_list(lst):
-    '''Remove all invalid path elements from lst.'''
+    """Remove all invalid path elements from lst."""
     lst[:] = [f for f in lst if check_input_path(f)]
 
 def read_input_file(filename):
-    '''Read a file containing a single path per line, return list of paths.
+    """Read a file containing a single path per line, return list of paths.
     Can throw exception IOError.
-    '''
+    """
     stream = open(filename, 'r')
     file_list = [line.rstrip('\n') for line in stream]
     stream.close()
     return file_list
 
 def read_dir(path, all_entries=False):
-    '''Return a list of paths in directory at path. If all_entries is not
+    """Return a list of paths in directory at path. If all_entries is not
     true, exclude all entries starting with a dot (.).
-    '''
+    """
     if not os.path.exists(path):
         return []
     filenames = os.listdir(path)
@@ -275,9 +275,9 @@ def read_dir(path, all_entries=False):
     return filenames
 
 def read_dir_recursive(path, all_entries=False):
-    '''Return a list of paths in directory at path (recursively). If
+    """Return a list of paths in directory at path (recursively). If
     all_entries is not true, exclude all entries starting with a dot (.).
-    '''
+    """
     paths = []
     for dirpath, dirnames, filenames in os.walk(path):
         for dirname in dirnames:
@@ -293,11 +293,11 @@ def read_dir_recursive(path, all_entries=False):
     return paths
 
 def decompose_mapping(graph):
-    '''Decompose a mapping ('bijective' bipartite graph) into
+    """Decompose a mapping ('bijective' bipartite graph) into
     paths and cycles and returns them.
 
     Attention: Afterwards, graph will be empty!
-    '''
+    """
     paths = {}
     cycles = {}
     while graph:
@@ -314,7 +314,7 @@ def decompose_mapping(graph):
 
 
 def main(args=None):
-    '''Main function.'''
+    """Main function."""
 
     global PROG_NAME
     global SIMULATE
