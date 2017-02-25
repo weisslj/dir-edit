@@ -272,6 +272,18 @@ class DirEditTestCase(unittest.TestCase):
         self.dir_edit(self.tmpdir, '-r', '-o', self.tmpfile('y'))
         self.assertEqual(['y'], self.list_tmpdir())
 
+    def test_recursive_cleanup_multiple(self):
+        """Check that recursive mode cleans up empty directories."""
+        self.put_files('x/a/b/c/d')
+        self.dir_edit(self.tmpdir, '-r', '-o', self.tmpfile('y'))
+        self.assertEqual(['y'], self.list_tmpdir())
+
+    def test_recursive_mkdir(self):
+        """Check that recursive mode can create directories."""
+        self.put_files('x/a')
+        self.dir_edit(self.tmpdir, '-r', '-o', self.tmpfile('x/b/c/d'))
+        self.assertEqual(['x/b/c/d'], self.list_tmpdir())
+
     # TODO: Fix bug!
     # def test_recursive_fail2(self):
     #     """Test that recursive mode works."""
