@@ -203,12 +203,16 @@ def path_renames(src, dst):
     if dst.head and not os.path.exists(dst.head):
         dir_make_all(dst.head)
     path_rename(src, dst)
+    # FIXME: Restructure!
     lca = path_least_common_ancestor(src, dst)
-    if src.head and src.tail:
+    if src.head and src.tail and not os.path.isabs(src):
         head, tail = os.path.split(src.real)
         while head != lca:
-            if os.listdir(head) == [tail]:
+            content = [tail] if SIMULATE else []
+            if os.listdir(head) == content:
                 dir_remove(head)
+            else:
+                break
             head, tail = os.path.split(head)
 #
 ##############################################################################
