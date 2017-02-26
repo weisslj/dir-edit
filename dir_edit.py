@@ -262,9 +262,8 @@ def read_input_file(filename):
     """Read a file containing a single path per line, return list of paths.
     Can throw exception IOError.
     """
-    stream = open(filename, 'r')
-    file_list = [line.rstrip('\n') for line in stream]
-    stream.close()
+    with open(filename, 'r') as stream:
+        file_list = [line.rstrip('\n') for line in stream]
     return file_list
 
 def read_dir(path, all_entries=False):
@@ -361,9 +360,8 @@ def dir_edit(dirname, filenames, options):
     else:
         tmpfile = os.path.join(TMPDIR, 'file_list')
         nl_r = re.compile(r'[\n\r]+')
-        stream = open(tmpfile, 'w')
-        stream.write(''.join([nl_r.sub(' ', e) + '\n' for e in file_list]))
-        stream.close()
+        with open(tmpfile, 'w') as stream:
+            stream.write(''.join([nl_r.sub(' ', e) + '\n' for e in file_list]))
 
         command = options.editor + ' ' + shellquote(tmpfile)
         retval = subprocess.call(command, shell=True)
@@ -371,9 +369,8 @@ def dir_edit(dirname, filenames, options):
         if retval != 0:
             error('editor command failed: %s', command)
 
-        stream = open(tmpfile, 'r')
-        new_file_list = [line.rstrip('\n') for line in stream]
-        stream.close()
+        with open(tmpfile, 'r') as stream:
+            new_file_list = [line.rstrip('\n') for line in stream]
 
     if len(file_list) != len(new_file_list):
         error('new file list has different length than old')
