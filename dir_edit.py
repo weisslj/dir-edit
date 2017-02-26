@@ -330,8 +330,8 @@ def dir_edit(dirname, filenames, options):
     if options.input:
         try:
             file_list = read_input_file(options.input)
-        except IOError, (_errno, strerror):
-            error('error reading input file: %s', strerror)
+        except IOError as exc:
+            error('error reading input file: %s', exc.strerror)
         sanitize_file_list(file_list)
     elif filenames:
         file_list = filenames
@@ -356,8 +356,8 @@ def dir_edit(dirname, filenames, options):
     if options.output:
         try:
             new_file_list = read_input_file(options.output)
-        except IOError, (_errno, strerror):
-            error('error reading output file: %s', strerror)
+        except IOError as exc:
+            error('error reading output file: %s', exc.strerror)
     else:
         tmpfile = os.path.join(TMPDIR, 'file_list')
         nl_r = re.compile(r'[\n\r]+')
