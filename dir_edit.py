@@ -317,74 +317,13 @@ def decompose_mapping(graph):
     return paths, cycles
 
 
-def main(args=None):
-    """Main function."""
+def dir_edit(dirname, filenames, options):
+    """Main functionality."""
 
-    global PROG_NAME
-    global SIMULATE
-    global VERBOSE
     global TMPDIR
 
-    locale.setlocale(locale.LC_ALL, '')
-
-    usage = 'Usage: %prog [OPTION]... [DIR] [FILES]...'
-    version = '%prog 1.1\nCopyright (C) 2010 Johannes Weißl\n'\
-        'License GPLv3+: GNU GPL version 3 or later '\
-        '<http://gnu.org/licenses/gpl.html>.\n'\
-        'This is free software: you are free to change and redistribute it.\n'\
-        'There is NO WARRANTY, to the extent permitted by law.'
-    desc = '''\
-Modify contents of DIR using an editor. Creates a temporary file, where
-every line is a filename in the directory DIR. Then an user-defined
-editor is started, enabling the user to edit the
-names. After saving, the script checks the file for consistency and
-detects rename loops or paths and finally performs the changes. If DIR
-is omitted, the current one is used.'''
-
-    if os.name == 'nt':
-        default_editor = 'notepad'
-    else:
-        default_editor = 'vi'
-    editor = os.getenv('EDITOR', default_editor)
-
-    parser = OptionParser(usage=usage, version=version, description=desc)
-
-    parser.add_option('-a', '--all', action='store_true', default=False,
-                      help='include entries starting with . (besides . and ..)')
-    parser.add_option('-d', '--dry-run', action='store_true',
-                      default=False, help='don\'t do any file system modifications')
-    parser.add_option('-e', '--editor', metavar='CMD',
-                      help='use CMD to edit dirfile (default: $EDITOR or vi)')
-    parser.add_option('-i', '--input', metavar='FILE',
-                      help='FILE containing paths to be edited (FILES, -a, -m, -n and -r ignored)')
-    parser.add_option('-o', '--output', metavar='FILE',
-                      help='FILE containing paths after being edited (-e is ignored)')
-    parser.add_option('-m', '--mangle-newlines', action='store_true',
-                      default=False, help='replace newlines in files through blanks')
-    parser.add_option('-n', '--numeric-sort', action='store_true',
-                      default=False, help='sort entries according to string numerical value')
-    parser.add_option('-R', '--remove-recursive', action='store_true',
-                      default=False, help='remove non-empty directories recursively')
-    parser.add_option('-r', '--recursive', action='store_true', default=False,
-                      help='list DIR recursively')
-    parser.add_option('-S', '--safe', action='store_true',
-                      default=False, help='do not create or remove directories while renaming')
-    parser.add_option('-v', '--verbose', action='store_true', default=False,
-                      help='output filesystem modifications to stdout')
-
-    (options, args) = parser.parse_args(args)
-    PROG_NAME = parser.get_prog_name()
-
-    VERBOSE = options.verbose
-    SIMULATE = options.dry_run
-    if options.editor:
-        editor = options.editor
-
-    directory = args[0] if args else os.curdir
-    files = args[1:]
-
     try:
-        os.chdir(directory)
+        os.chdir(dirname)
     except OSError as exc:
         error('error changing to directory `%s\': %s', dir, exc.strerror)
 
@@ -394,8 +333,8 @@ is omitted, the current one is used.'''
         except IOError, (_errno, strerror):
             error('error reading input file: %s', strerror)
         sanitize_file_list(file_list)
-    elif files:
-        file_list = files
+    elif filenames:
+        file_list = filenames
         sanitize_file_list(file_list)
     else:
         if not options.recursive:
@@ -426,7 +365,7 @@ is omitted, the current one is used.'''
         stream.write(''.join([nl_r.sub(' ', e) + '\n' for e in file_list]))
         stream.close()
 
-        command = editor + ' ' + shellquote(tmpfile)
+        command = options.editor + ' ' + shellquote(tmpfile)
         retval = subprocess.call(command, shell=True)
 
         if retval != 0:
@@ -506,8 +445,80 @@ is omitted, the current one is used.'''
         os.remove(tmpfile)
     os.rmdir(TMPDIR)
 
-if __name__ == '__main__':
+def main_throws(args=None):
+    """Main function, throws exception on error."""
+
+    global PROG_NAME
+    global SIMULATE
+    global VERBOSE
+
+    locale.setlocale(locale.LC_ALL, '')
+
+    usage = 'Usage: %prog [OPTION]... [DIR] [FILES]...'
+    version = '%prog 1.1\nCopyright (C) 2010 Johannes Weißl\n'\
+        'License GPLv3+: GNU GPL version 3 or later '\
+        '<http://gnu.org/licenses/gpl.html>.\n'\
+        'This is free software: you are free to change and redistribute it.\n'\
+        'There is NO WARRANTY, to the extent permitted by law.'
+    desc = '''\
+Modify contents of DIR using an editor. Creates a temporary file, where
+every line is a filename in the directory DIR. Then an user-defined
+editor is started, enabling the user to edit the
+names. After saving, the script checks the file for consistency and
+detects rename loops or paths and finally performs the changes. If DIR
+is omitted, the current one is used.'''
+
+    if os.name == 'nt':
+        default_editor = 'notepad'
+    else:
+        default_editor = 'vi'
+    editor = os.getenv('EDITOR', default_editor)
+
+    parser = OptionParser(usage=usage, version=version, description=desc)
+
+    parser.add_option('-a', '--all', action='store_true', default=False,
+                      help='include entries starting with . (besides . and ..)')
+    parser.add_option('-d', '--dry-run', action='store_true',
+                      default=False, help='don\'t do any file system modifications')
+    parser.add_option('-e', '--editor', metavar='CMD',
+                      help='use CMD to edit dirfile (default: $EDITOR or vi)')
+    parser.add_option('-i', '--input', metavar='FILE',
+                      help='FILE containing paths to be edited (FILES, -a, -m, -n and -r ignored)')
+    parser.add_option('-o', '--output', metavar='FILE',
+                      help='FILE containing paths after being edited (-e is ignored)')
+    parser.add_option('-m', '--mangle-newlines', action='store_true',
+                      default=False, help='replace newlines in files through blanks')
+    parser.add_option('-n', '--numeric-sort', action='store_true',
+                      default=False, help='sort entries according to string numerical value')
+    parser.add_option('-R', '--remove-recursive', action='store_true',
+                      default=False, help='remove non-empty directories recursively')
+    parser.add_option('-r', '--recursive', action='store_true', default=False,
+                      help='list DIR recursively')
+    parser.add_option('-S', '--safe', action='store_true',
+                      default=False, help='do not create or remove directories while renaming')
+    parser.add_option('-v', '--verbose', action='store_true', default=False,
+                      help='output filesystem modifications to stdout')
+
+    (options, args) = parser.parse_args(args)
+    PROG_NAME = parser.get_prog_name()
+
+    VERBOSE = options.verbose
+    SIMULATE = options.dry_run
+    if options.editor is None:
+        options.editor = editor
+
+    dirname = args[0] if args else os.curdir
+    filenames = args[1:]
+
+    dir_edit(dirname, filenames, options)
+
+def main(args=None):
+    """Main function, exits program on error."""
+
     try:
-        main()
+        main_throws(args)
     except Error:
         sys.exit(1)
+
+if __name__ == '__main__':
+    main()

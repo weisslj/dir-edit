@@ -122,7 +122,7 @@ class DirEditTestCase(unittest.TestCase):
         # Is a method to be overridden in child:
         # pylint: disable=no-self-use
         """Call dir_edit.py main function."""
-        dir_edit.main(args)
+        dir_edit.main_throws(args)
 
     def test_empty(self):
         """Raise error if called on empty directory."""
@@ -397,7 +397,7 @@ class DirEditDryRunVerboseTestCase(DirEditTestCase):
     def call_dir_edit(self, args):
         self.setup_stdout()
         try:
-            dir_edit.main(['--dry-run', '--verbose'] + args)
+            dir_edit.main_throws(['--dry-run', '--verbose'] + args)
         finally:
             self.restore_stdout()
         for command in self.output.split('\n'):
