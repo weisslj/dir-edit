@@ -2,6 +2,7 @@
 
 import sys
 import os
+import re
 import errno
 import unittest
 import tempfile
@@ -134,6 +135,14 @@ class DirEditTestCase(unittest.TestCase):
         help_output2 = dir_edit_external('--help')
         self.assertRegexpMatches(help_output1, '^Usage: dir_edit')
         self.assertEqual(help_output1, help_output2)
+
+    def test_version(self):
+        """Check that the '--version' option works."""
+        here = os.path.abspath(os.path.dirname(__file__))
+        setup_prog = os.path.join(here, 'setup.py')
+        version = subprocess.check_output(['python', setup_prog, '--version'])
+        version_output = dir_edit_external('--version')
+        self.assertRegexpMatches(version_output, '^dir_edit.py ' + re.escape(version))
 
     def test_editor(self):
         """Check that '-e' and '--editor' options work."""

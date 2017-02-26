@@ -328,7 +328,7 @@ def main(args=None):
     locale.setlocale(locale.LC_ALL, '')
 
     usage = 'Usage: %prog [OPTION]... [DIR] [FILES]...'
-    version = '%prog 1.0\nCopyright (C) 2010 Johannes Weißl\n'\
+    version = '%prog 1.1\nCopyright (C) 2010 Johannes Weißl\n'\
         'License GPLv3+: GNU GPL version 3 or later '\
         '<http://gnu.org/licenses/gpl.html>.\n'\
         'This is free software: you are free to change and redistribute it.\n'\
