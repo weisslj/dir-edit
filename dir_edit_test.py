@@ -33,6 +33,12 @@ def mkdir_p(path):
         else:
             raise
 
+def dir_edit_external(*args):
+    """Call dir_edit.py as external process."""
+    here = os.path.abspath(os.path.dirname(__file__))
+    prog = os.path.join(here, 'dir_edit.py')
+    return subprocess.check_output([prog] + list(args), stderr=subprocess.STDOUT)
+
 class DirEditTestCase(unittest.TestCase):
     # pylint: disable=too-many-instance-attributes,too-many-public-methods
     """Main dir_edit.py test class."""
@@ -121,6 +127,13 @@ class DirEditTestCase(unittest.TestCase):
         """Raise error if called on empty directory."""
         with self.assertRaisesRegexp(dir_edit.Error, 'no valid path given for renaming'):
             self.dir_edit(self.tmpdir)
+
+    def test_help(self):
+        """Check that '-h' and '--help' options work."""
+        help_output1 = dir_edit_external('-h')
+        help_output2 = dir_edit_external('--help')
+        self.assertRegexpMatches(help_output1, '^Usage: dir_edit')
+        self.assertEqual(help_output1, help_output2)
 
     def test_editor(self):
         """Check that '-e' and '--editor' options work."""
