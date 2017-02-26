@@ -316,10 +316,8 @@ class DirEditTestCase(unittest.TestCase):
     def test_own_subdirectory_multiple(self):
         """Move a file to a subdirectory with the same name."""
         self.put_files('a/b')
-        with self.assertRaisesRegexp(OSError, 'Not a directory'):
-            self.dir_edit(self.tmpdir, '-r', '-o', self.tmpfile('a/b/c/d'))
-        # TODO: Fix this bug!
-        # self.assertEqual(['a/b/c/d'], self.list_tmpdir())
+        self.dir_edit(self.tmpdir, '-r', '-o', self.tmpfile('a/b/c/d'))
+        self.assertEqual(['a/b/c/d'], self.list_tmpdir())
 
     def test_safe(self):
         """Check that '-S' and '--safe' options work."""

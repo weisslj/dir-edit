@@ -194,7 +194,7 @@ def path_renames(src, dst):
     if os.path.exists(dst):
         warn('path %s already exists, skip', dst)
         return
-    if src.real == os.path.dirname(dst.real):
+    if os.path.commonprefix([src.real, os.path.dirname(dst.real)]) == src.real:
         tmp_src = os.path.join(TMPDIR, 's_' + src.tail)
         path_rename(src, tmp_src)
         dir_make_all(dst.head)
