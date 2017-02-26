@@ -325,7 +325,7 @@ def dir_edit(dirname, filenames, options):
     try:
         os.chdir(dirname)
     except OSError as exc:
-        error('error changing to directory `%s\': %s', dir, exc.strerror)
+        error('%s: %s', dirname, exc.strerror)
 
     if options.input:
         try:

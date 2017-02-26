@@ -156,13 +156,13 @@ class DirEditTestCase(unittest.TestCase):
 
     def test_nonexisting(self):
         """Raise error if directory does not exist."""
-        with self.assertRaisesRegexp(dir_edit.Error, 'No such file or directory'):
+        with self.assertRaisesRegexp(dir_edit.Error, 'nonexist: No such file or directory'):
             self.dir_edit(os.path.join(self.tmpdir, 'nonexist'))
 
     def test_nodirectory(self):
         """Raise error if path is no directory."""
         self.put_files('file')
-        with self.assertRaisesRegexp(dir_edit.Error, 'Not a directory'):
+        with self.assertRaisesRegexp(dir_edit.Error, 'file: Not a directory'):
             self.dir_edit(os.path.join(self.tmpdir, 'file'))
 
     def test_output(self):
