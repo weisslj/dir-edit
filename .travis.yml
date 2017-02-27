@@ -5,6 +5,5 @@ install:
  - pip install -r requirements-test.txt
 script:
   - coverage run test_dir_edit.py
-  - python setup.py -q install
-after_success:
   - coverage report --fail-under=100
+  - python setup.py -q install
