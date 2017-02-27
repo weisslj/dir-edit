@@ -463,6 +463,17 @@ class DirEditTestCase(unittest.TestCase):
         self.dir_edit(self.tmpdir, '-r', '-o', self.tmpfile('c'))
         self.assertEqual(['c'], self.list_tmpdir())
 
+    def test_realpath(self):
+        """Check that paths are correctly compared."""
+        self.put_files('a')
+        self.dir_edit(self.tmpdir, '-o', self.tmpfile('x/..//a'))
+        self.dir_edit(self.tmpdir, '-i', self.tmpfile('./a'), '-o', self.tmpfile('a'))
+        # for coverage:
+        self.assertFalse(dir_edit.Path('a') == [])
+        self.assertTrue(dir_edit.Path('a') < dir_edit.Path('b'))
+        self.assertTrue(dir_edit.Path('a') < 'b')
+        self.assertTrue(dir_edit.Path('a') < [])
+
     def test_multibyte_error(self):
         """Check that multibyte error message works."""
         regexp = '(No such file or directory|The system cannot find the file specified)'

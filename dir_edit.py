@@ -16,6 +16,7 @@ import tempfile
 import locale
 import subprocess
 from optparse import OptionParser
+from functools import total_ordering
 
 PROG_NAME = 'dir_edit'
 SIMULATE = False
@@ -52,6 +53,7 @@ def fslog(msg, *args, **_kwargs):
 #
 ##############################################################################
 
+@total_ordering
 class Path(str):
     """Represent a path.
 
@@ -78,33 +80,19 @@ class Path(str):
         self.head = head
         self.tail = tail
     def __eq__(self, other):
-        if isinstance(other, str):
-            return self.string == other
-        return self.real == other.real
-    def __ne__(self, other):
-        if isinstance(other, str):
-            return self.string != other
-        return self.real != other.real
+        if isinstance(other, Path):
+            return self.real == other.real
+        elif isinstance(other, str):
+            return self == Path(other)
+        else:
+            return NotImplemented
     def __lt__(self, other):
-        if isinstance(other, str):
-            return self.string < other
-        return self.real < other.real
-    def __le__(self, other):
-        if isinstance(other, str):
-            return self.string <= other
-        return self.real <= other.real
-    def __gt__(self, other):
-        if isinstance(other, str):
-            return self.string > other
-        return self.real > other.real
-    def __ge__(self, other):
-        if isinstance(other, str):
-            return self.string >= other
-        return self.real >= other.real
-    def __cmp__(self, other):
-        if isinstance(other, str):
-            return self.string.__cmp__(other)
-        return self.real.__cmp__(other.real)
+        if isinstance(other, Path):
+            return self.real < other.real
+        elif isinstance(other, str):
+            return self < Path(other)
+        else:
+            return NotImplemented
     def __hash__(self):
         return self.real.__hash__()
 
