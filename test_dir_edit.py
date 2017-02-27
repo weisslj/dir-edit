@@ -180,7 +180,7 @@ class DirEditTestCase(unittest.TestCase):
         """Check that '-h' and '--help' options work."""
         help_output1 = dir_edit_external('-h')
         help_output2 = dir_edit_external('--help')
-        self.assertRegex(help_output1, '^Usage: dir_edit')
+        self.assertRegex(help_output1, '^usage: dir_edit')
         self.assertEqual(help_output1, help_output2)
 
     def test_version(self):
@@ -455,7 +455,7 @@ class DirEditTestCase(unittest.TestCase):
         """Check that existing destination error is handled."""
         self.put_files('a/x', 'b/y')
         self.setup_stdout()
-        self.dir_edit(self.tmpdir, '-r', 'a', '-o', self.tmpfile('b/y'))
+        self.dir_edit(self.tmpdir, 'a', '-r', '-o', self.tmpfile('b/y'))
         self.restore_stdout()
         self.assertEqual([('a/x', 'a/x'), ('b/y', 'b/y')], self.list_tmpdir_content())
         self.assertRegex(self.error, 'path b/y already exists, skip')

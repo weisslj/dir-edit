@@ -16,14 +16,13 @@ import re
 import tempfile
 import locale
 import subprocess
-from optparse import OptionParser
+import argparse
 from functools import total_ordering
 from functools import reduce
 
 if sys.version_info < (3, 2):
     os.fsencode = lambda filename: filename
 
-PROG_NAME = 'dir_edit'
 SIMULATE = False
 VERBOSE = False
 TMPDIR = None
@@ -37,7 +36,8 @@ class Error(Exception):
 #
 def warn(msg, *args, **_kwargs):
     """Output a warning message to stderr."""
-    msg = '%s: %s' % (PROG_NAME, msg % args)
+    prog_name = os.path.basename(sys.argv[0])
+    msg = '%s: %s' % (prog_name, msg % args)
     if sys.version_info < (3, 0):
         msg = msg.decode(errors='replace')
     print(msg, file=sys.stderr)
@@ -302,45 +302,45 @@ def decompose_mapping(graph):
     return paths, cycles
 
 
-def dir_edit(dirname, filenames, options):
+def dir_edit(args):
     """Main functionality."""
 
     global TMPDIR
 
     try:
-        os.chdir(dirname)
+        os.chdir(args.dir)
     except OSError as exc:
-        raise Error('%s: %s' % (dirname, exc.strerror))
+        raise Error('%s: %s' % (args.dir, exc.strerror))
 
-    if options.input:
+    if args.input:
         try:
-            file_list = read_input_file(options.input)
+            file_list = read_input_file(args.input)
         except IOError as exc:
             raise Error('error reading input file: %s' % (exc.strerror,))
         sanitize_file_list(file_list)
-    elif filenames:
-        file_list = filenames
+    elif args.files:
+        file_list = args.files
         sanitize_file_list(file_list)
     else:
-        if not options.recursive:
-            file_list = read_dir(os.curdir, options.all)
+        if not args.recursive:
+            file_list = read_dir(os.curdir, args.all)
         else:
-            file_list = read_dir_recursive(os.curdir, options.all)
-        key = textkey_path if not options.numeric_sort else numkey_path
+            file_list = read_dir_recursive(os.curdir, args.all)
+        key = textkey_path if not args.numeric_sort else numkey_path
         file_list.sort(key=key)
 
     if not file_list:
         raise Error('no valid path given for renaming')
 
-    if not options.mangle_newlines:
+    if not args.mangle_newlines:
         for filename in file_list:
             if '\n' in filename or '\r' in filename:
                 raise Error('file names with newlines are not supported, try -m!')
 
     TMPDIR = tempfile.mkdtemp(prefix='dir_edit-')
-    if options.output:
+    if args.output:
         try:
-            new_file_list = read_input_file(options.output)
+            new_file_list = read_input_file(args.output)
         except IOError as exc:
             raise Error('error reading output file: %s' % (exc.strerror,))
     else:
@@ -352,10 +352,10 @@ def dir_edit(dirname, filenames, options):
         if os.name == 'nt':
             # Windows opens default editor if text file is opened directly:
             command = [tmpfile]
-            if options.editor:
-                command = options.editor + ' ' + subprocess.list2cmdline(command)
+            if args.editor:
+                command = args.editor + ' ' + subprocess.list2cmdline(command)
         else:
-            command = options.editor + ' ' + shellquote(tmpfile)
+            command = args.editor + ' ' + shellquote(tmpfile)
         retval = subprocess.call(command, shell=True)
 
         if retval != 0:
@@ -414,9 +414,9 @@ def dir_edit(dirname, filenames, options):
             fslog('mkdir %s', TMPDIR)
 
         for srcpath in to_remove:
-            path_remove(srcpath, options.remove_recursive)
+            path_remove(srcpath, args.remove_recursive)
 
-        rename_func = rev_redux_rename if options.safe else rev_redux_renames
+        rename_func = rev_redux_rename if args.safe else rev_redux_renames
 
         for path in paths.values():
             reduce(rename_func, reversed(path))
@@ -430,76 +430,69 @@ def dir_edit(dirname, filenames, options):
         if need_tmpdir:
             fslog('rmdir %s', TMPDIR)
 
-    if not options.output:
+    if not args.output:
         os.remove(tmpfile)
     os.rmdir(TMPDIR)
 
 def main_throws(args=None):
     """Main function, throws exception on error."""
 
-    global PROG_NAME
     global SIMULATE
     global VERBOSE
 
     locale.setlocale(locale.LC_ALL, '')
 
-    usage = 'Usage: %prog [OPTION]... [DIR] [FILES]...'
-    version = '%prog 1.1\nCopyright (C) 2010-2017 Johannes Weißl\n'\
-        'License GPLv3+: GNU GPL version 3 or later '\
-        '<http://gnu.org/licenses/gpl.html>.\n'\
-        'This is free software: you are free to change and redistribute it.\n'\
-        'There is NO WARRANTY, to the extent permitted by law.'
+    usage = '%(prog)s [OPTION]... [DIR] [FILES]...'
     desc = '''\
-Modify contents of DIR using an editor. Creates a temporary file, where
-every line is a filename in the directory DIR. Then an user-defined
-editor is started, enabling the user to edit the
-names. After saving, the script checks the file for consistency and
-detects rename loops or paths and finally performs the changes. If DIR
-is omitted, the current one is used.'''
+Modify contents of DIR using an editor. Creates a temporary file, where every
+line is a filename in the directory DIR. Then an editor is started, enabling
+the user to rename or delete (blank line) entries. After saving, the script
+performs a consistency check, detects rename loops / paths and finally executes
+the changes.'''
 
     default_editor = 'vi'
     if os.name == 'nt':
         # Windows opens default editor if text file is opened directly:
         default_editor = ''
-    editor = os.getenv('EDITOR', default_editor)
+    default_editor = os.getenv('EDITOR', default_editor)
 
-    parser = OptionParser(usage=usage, version=version, description=desc)
+    parser = argparse.ArgumentParser(usage=usage, description=desc)
 
-    parser.add_option('-a', '--all', action='store_true', default=False,
-                      help='include entries starting with . (besides . and ..)')
-    parser.add_option('-d', '--dry-run', action='store_true',
-                      default=False, help='don\'t do any file system modifications')
-    parser.add_option('-e', '--editor', metavar='CMD',
-                      help='use CMD to edit dirfile (default: $EDITOR or vi)')
-    parser.add_option('-i', '--input', metavar='FILE',
-                      help='FILE containing paths to be edited (FILES, -a, -m, -n and -r ignored)')
-    parser.add_option('-o', '--output', metavar='FILE',
-                      help='FILE containing paths after being edited (-e is ignored)')
-    parser.add_option('-m', '--mangle-newlines', action='store_true',
-                      default=False, help='replace newlines in files through blanks')
-    parser.add_option('-n', '--numeric-sort', action='store_true',
-                      default=False, help='sort entries according to string numerical value')
-    parser.add_option('-R', '--remove-recursive', action='store_true',
-                      default=False, help='remove non-empty directories recursively')
-    parser.add_option('-r', '--recursive', action='store_true', default=False,
-                      help='list DIR recursively')
-    parser.add_option('-S', '--safe', action='store_true',
-                      default=False, help='do not create or remove directories while renaming')
-    parser.add_option('-v', '--verbose', action='store_true', default=False,
-                      help='output filesystem modifications to stdout')
+    parser.add_argument('dir', metavar='DIR', nargs='?', default=os.curdir,
+                        help='directory to edit (default: current directory)')
+    parser.add_argument('files', metavar='FILES', nargs='*',
+                        help='limit to these filenames (relative to DIR)')
+    parser.add_argument('--version', action='version', version='%(prog)s 1.1')
+    parser.add_argument('-a', '--all', action='store_true', default=False,
+                        help='include entries starting with . (besides . and ..)')
+    parser.add_argument('-d', '--dry-run', action='store_true',
+                        default=False, help='don\'t do any file system modifications')
+    parser.add_argument('-e', '--editor', metavar='CMD', default=default_editor,
+                        help='use CMD to edit dirfile (default: $EDITOR or vi)')
+    parser.add_argument('-i', '--input', metavar='FILE',
+                        help=('FILE containing paths to be edited '
+                              '(FILES, -a, -m, -n, and -r ignored)'))
+    parser.add_argument('-o', '--output', metavar='FILE',
+                        help='FILE containing paths after being edited (-e is ignored)')
+    parser.add_argument('-m', '--mangle-newlines', action='store_true',
+                        default=False, help='replace newlines in files through blanks')
+    parser.add_argument('-n', '--numeric-sort', action='store_true',
+                        default=False, help='sort entries according to string numerical value')
+    parser.add_argument('-R', '--remove-recursive', action='store_true',
+                        default=False, help='remove non-empty directories recursively')
+    parser.add_argument('-r', '--recursive', action='store_true', default=False,
+                        help='list DIR recursively')
+    parser.add_argument('-S', '--safe', action='store_true',
+                        default=False, help='do not create or remove directories while renaming')
+    parser.add_argument('-v', '--verbose', action='store_true', default=False,
+                        help='output filesystem modifications to stdout')
 
-    (options, args) = parser.parse_args(args)
-    PROG_NAME = parser.get_prog_name()
+    args = parser.parse_args(args)
 
-    VERBOSE = options.verbose
-    SIMULATE = options.dry_run
-    if options.editor is None:
-        options.editor = editor
+    VERBOSE = args.verbose
+    SIMULATE = args.dry_run
 
-    dirname = args[0] if args else os.curdir
-    filenames = args[1:]
-
-    dir_edit(dirname, filenames, options)
+    dir_edit(args)
 
 def main(args=None):
     """Main function, exits program on error."""
