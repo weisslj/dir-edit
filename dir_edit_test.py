@@ -284,6 +284,14 @@ class DirEditTestCase(unittest.TestCase):
         self.dir_edit(self.tmpdir, '--all', '-o', self.tmpfile('.c'))
         self.assertEqual(['.c'], self.list_tmpdir())
 
+    def test_all_not_top(self):
+        """Check that missing '-a' option does not exclude top directory."""
+        self.put_files('.x/a')
+        self.dir_edit(os.path.join(self.tmpdir, '.x'), '-o', self.tmpfile('b'))
+        self.assertEqual(['.x/b'], self.list_tmpdir())
+        self.dir_edit(os.path.join(self.tmpdir, '.x'), '-r', '-o', self.tmpfile('c'))
+        self.assertEqual(['.x/c'], self.list_tmpdir())
+
     def test_all_recursive(self):
         """Check that '-a' option works in recursive mode."""
         self.put_files('.x/a', 'y/.b', 'z')
