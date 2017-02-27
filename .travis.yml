@@ -11,6 +11,5 @@ python:
 install:
  - pip install -r requirements-test.txt
 script:
-  - coverage run test_dir_edit.py
-  - coverage report --fail-under=100
+  - python test_dir_edit.py
   - python setup.py -q install
