@@ -128,6 +128,14 @@ class DirEditTestCase(unittest.TestCase):
         """Call dir_edit.py main function."""
         dir_edit.main_throws(args)
 
+    def test_mkdir_p(self):
+        """Test internal function for coverage."""
+        self.put_files('a/b')
+        self.put_dirs('c/d')
+        with self.assertRaisesRegexp(OSError, 'File exists'):
+            self.put_dirs('a/b')
+        self.assertEqual(['a/b', 'c/d/'], self.list_tmpdir())
+
     def test_empty(self):
         """Raise error if called on empty directory."""
         with self.assertRaisesRegexp(dir_edit.Error, 'no valid path given for renaming'):
