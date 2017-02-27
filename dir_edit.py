@@ -496,7 +496,6 @@ the changes.'''
 
 def main(args=None):
     """Main function, exits program on error."""
-
     try:
         main_throws(args)
     except Error as exc:
