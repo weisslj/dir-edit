@@ -2,7 +2,6 @@ language: python
 python:
   - "2.7"
   - "3.5"
-  - "3.2"
   - "3.3"
   - "3.4"
   - "3.5"
@@ -11,5 +10,6 @@ python:
 install:
  - pip install -r requirements-test.txt
 script:
-  - python test_dir_edit.py
+  - coverage run test_dir_edit.py
+  - coverage report --fail-under=100
   - python setup.py -q install
