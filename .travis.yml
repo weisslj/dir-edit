@@ -2,6 +2,6 @@ language: python
 python:
   - "2.7"
 script:
-  - python-coverage run test_dir_edit.py
+  - coverage run test_dir_edit.py
 after_success:
-  - python-coverage report
+  - coverage report
