@@ -353,12 +353,18 @@ def dir_edit(dirname, filenames, options):
         except IOError as exc:
             error('error reading output file: %s', exc.strerror)
     else:
-        tmpfile = os.path.join(TMPDIR, 'file_list')
+        tmpfile = os.path.join(TMPDIR, 'file_list.txt')
         nl_r = re.compile(r'[\n\r]+')
         with open(tmpfile, 'w') as stream:
             stream.write(''.join([nl_r.sub(' ', e) + '\n' for e in file_list]))
 
-        command = options.editor + ' ' + shellquote(tmpfile)
+        if os.name == 'nt':
+            # Windows opens default editor if text file is opened directly:
+            command = [tmpfile]
+            if options.editor:
+                command = options.editor + ' ' + subprocess.list2cmdline(command)
+        else:
+            command = options.editor + ' ' + shellquote(tmpfile)
         retval = subprocess.call(command, shell=True)
 
         if retval != 0:
@@ -400,7 +406,7 @@ def dir_edit(dirname, filenames, options):
     if mapping or to_remove:
 
         # log directory change
-        fslog('chdir %s', os.path.realpath(os.curdir))
+        fslog('cd %s', os.path.realpath(os.curdir))
 
         need_tmpdir = False
         for srcpath, dstpath in mapping.iteritems():
@@ -460,10 +466,10 @@ names. After saving, the script checks the file for consistency and
 detects rename loops or paths and finally performs the changes. If DIR
 is omitted, the current one is used.'''
 
+    default_editor = 'vi'
     if os.name == 'nt':
-        default_editor = 'notepad'
-    else:
-        default_editor = 'vi'
+        # Windows opens default editor if text file is opened directly:
+        default_editor = ''
     editor = os.getenv('EDITOR', default_editor)
 
     parser = OptionParser(usage=usage, version=version, description=desc)

@@ -16,9 +16,9 @@ def listdir_recursive(top):
     """Yield leaf nodes of 'top' directory recursively."""
     for root, dirs, files in os.walk(top):
         for name in files:
-            yield os.path.relpath(os.path.join(root, name), top)
+            yield os.path.relpath(os.path.join(root, name), top).replace(os.sep, '/')
         if root != top and not dirs and not files:
-            yield os.path.relpath(root, top) + '/'
+            yield os.path.relpath(root, top).replace(os.sep, '/') + '/'
 
 def path_content(path):
     """Return file content or '<dir>' for directories."""
@@ -42,7 +42,10 @@ def dir_edit_external(*args):
     """Call dir_edit.py as external process."""
     here = os.path.abspath(os.path.dirname(__file__))
     prog = os.path.join(here, 'dir_edit.py')
-    return subprocess.check_output([prog] + list(args), stderr=subprocess.STDOUT)
+    shell = False
+    if os.name == 'nt':
+        shell = True
+    return subprocess.check_output([prog] + list(args), stderr=subprocess.STDOUT, shell=shell)
 
 class DirEditTestCase(unittest.TestCase):
     # pylint: disable=too-many-instance-attributes,too-many-public-methods
@@ -132,7 +135,8 @@ class DirEditTestCase(unittest.TestCase):
         """Test internal function for coverage."""
         self.put_files('a/b')
         self.put_dirs('c/d')
-        with self.assertRaisesRegexp(OSError, 'File exists'):
+        regexp = '(File exists|Cannot create a file when that file already exists)'
+        with self.assertRaisesRegexp(OSError, regexp):
             self.put_dirs('a/b')
         self.assertEqual(['a/b', 'c/d/'], self.list_tmpdir())
 
@@ -175,23 +179,32 @@ class DirEditTestCase(unittest.TestCase):
     def test_editor(self):
         """Check that '-e' and '--editor' options work."""
         self.put_files('a1', 'a2')
-        self.dir_edit(self.tmpdir, '-e', 'sed -i -e "s/a/b/"')
+        pysed = (
+            'python -c "'
+            'from sys import argv as a;'
+            's = open(a[3]).read();'
+            'open(a[3], \'w\').write(s.replace(a[1], a[2]))'
+            '"'
+        )
+        self.dir_edit(self.tmpdir, '-e', pysed + ' a b')
         self.assertEqual(['b1', 'b2'], self.list_tmpdir())
-        self.dir_edit(self.tmpdir, '--editor', 'sed -i -e "s/b/c/"')
+        self.dir_edit(self.tmpdir, '--editor', pysed + ' b c')
         self.assertEqual(['c1', 'c2'], self.list_tmpdir())
         with self.assertRaisesRegexp(dir_edit.Error, 'editor command failed'):
-            self.dir_edit(self.tmpdir, '-e' 'false')
+            self.dir_edit(self.tmpdir, '-e' 'python -c "exit(1)"')
 
     def test_nonexisting(self):
         """Raise error if directory does not exist."""
-        with self.assertRaisesRegexp(dir_edit.Error, 'nonexist: No such file or directory'):
+        regexp = 'nonexist: (No such file or directory|The system cannot find the file specified)'
+        with self.assertRaisesRegexp(dir_edit.Error, regexp):
             self.dir_edit(os.path.join(self.tmpdir, 'nonexist'))
 
     def test_nodirectory(self):
         """Raise error if path is no directory."""
-        self.put_files('file')
-        with self.assertRaisesRegexp(dir_edit.Error, 'file: Not a directory'):
-            self.dir_edit(os.path.join(self.tmpdir, 'file'))
+        self.put_files('nodirectory')
+        regexp = 'nodirectory: (Not a directory|The directory name is invalid)'
+        with self.assertRaisesRegexp(dir_edit.Error, regexp):
+            self.dir_edit(os.path.join(self.tmpdir, 'nodirectory'))
 
     def test_output(self):
         """Check that '-o' and '--output' options work."""
@@ -225,15 +238,16 @@ class DirEditTestCase(unittest.TestCase):
         self.dir_edit(self.tmpdir, 'b2', '-o', self.tmpfile('c2'))
         self.assertEqual(['a1', 'c2'], self.list_tmpdir())
 
+    @unittest.skipIf(os.name == 'nt', 'newlines in files not supported on Windows')
     def test_newlines(self):
         """Check that '-m' and '--mangle-newlines' options work."""
         self.put_files('a\r\n1', 'a\n\n2')
         with self.assertRaisesRegexp(dir_edit.Error, 'file names with newlines are not supported'):
             self.dir_edit(self.tmpdir)
-        self.dir_edit(self.tmpdir, '-m', '-e', 'touch')
+        self.dir_edit(self.tmpdir, '-m', '-e', 'python -c "exit(0)"')
         self.assertEqual(['a 1', 'a 2'], self.list_tmpdir())
         self.put_files('a\r3')
-        self.dir_edit(self.tmpdir, '--mangle-newlines', '-e', 'touch')
+        self.dir_edit(self.tmpdir, '--mangle-newlines', '-e', 'python -c "exit(0)"')
         self.assertEqual(['a 1', 'a 2', 'a 3'], self.list_tmpdir())
 
     def test_same_length(self):
@@ -326,9 +340,16 @@ class DirEditTestCase(unittest.TestCase):
 
     def test_filenames(self):
         """Test that filenames with special characters work."""
-        self.put_files("'", '"', '-')
-        self.dir_edit(self.tmpdir, '-e', 'sed -i -e "s/^/a/"')
-        self.assertEqual([('a"', '"'), ("a'", "'"), ('a-', '-')], self.list_tmpdir_content())
+        self.put_files('-', "'")
+        self.dir_edit(self.tmpdir, '-o', self.tmpfile('', ''))
+        self.assertEqual([], self.list_tmpdir())
+
+    @unittest.skipIf(os.name == 'nt', 'filenames not supported on Windows')
+    def test_filenames_posix(self):
+        """Test that filenames with special characters work."""
+        self.put_files('"')
+        self.dir_edit(self.tmpdir, '-o', self.tmpfile(''))
+        self.assertEqual([], self.list_tmpdir())
 
     def test_recursive(self):
         """Test that recursive mode ('-r' and '--recursive') works."""
@@ -401,7 +422,8 @@ class DirEditTestCase(unittest.TestCase):
         """Check that '-S' and '--safe' options work."""
         self.put_files('a')
         # TODO: Better error message!
-        with self.assertRaisesRegexp(OSError, 'No such file or directory'):
+        regexp = '(No such file or directory|The system cannot find the path specified)'
+        with self.assertRaisesRegexp(OSError, regexp):
             self.dir_edit(self.tmpdir, '-S', '-o', self.tmpfile('x/y'))
         self.assertEqual(['a'], self.list_tmpdir())
 
@@ -443,11 +465,13 @@ class DirEditTestCase(unittest.TestCase):
 
     def test_multibyte_error(self):
         """Check that multibyte error message works."""
-        with self.assertRaisesRegexp(dir_edit.Error, 'No such file or directory'):
+        regexp = '(No such file or directory|The system cannot find the file specified)'
+        with self.assertRaisesRegexp(dir_edit.Error, regexp):
             self.dir_edit(os.path.join(self.tmpdir, '\xc3\xa4'))
-        with self.assertRaisesRegexp(dir_edit.Error, 'No such file or directory'):
+        with self.assertRaisesRegexp(dir_edit.Error, regexp):
             self.dir_edit(os.path.join(self.tmpdir, '\xe4'))
 
+@unittest.skipIf(os.name == 'nt', 'not yet supported on Windows')
 class DirEditDryRunVerboseTestCase(DirEditTestCase):
     """Test dir_edit.py -d -v."""
     def call_dir_edit(self, args):
