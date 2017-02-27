@@ -282,17 +282,15 @@ def read_dir_recursive(path, all_entries=False):
     all_entries is not true, exclude all entries starting with a dot (.).
     """
     paths = []
-    for dirpath, dirnames, filenames in os.walk(path):
-        for dirname in dirnames:
-            absdirname = os.path.join(dirpath, dirname)
-            # No non-empty directories, only leafs:
-            if os.listdir(absdirname):
-                continue
-            if all_entries or not dirname.startswith('.'):
-                paths.append(os.path.normpath(absdirname))
-        for filename in filenames:
-            if all_entries or not filename.startswith('.'):
-                paths.append(os.path.normpath(os.path.join(dirpath, filename)))
+    for root, dirs, files in os.walk(path):
+        for name in files:
+            if all_entries or not name.startswith('.'):
+                paths.append(os.path.normpath(os.path.join(root, name)))
+        if not all_entries:
+            dirs[:] = [name for name in dirs if not name.startswith('.')]
+        if root != path and not dirs and not files:
+            if all_entries or not root.startswith('.'):
+                paths.append(os.path.normpath(root))
     return paths
 
 def decompose_mapping(graph):

@@ -284,6 +284,14 @@ class DirEditTestCase(unittest.TestCase):
         self.dir_edit(self.tmpdir, '--all', '-o', self.tmpfile('.c'))
         self.assertEqual(['.c'], self.list_tmpdir())
 
+    def test_all_recursive(self):
+        """Check that '-a' option works in recursive mode."""
+        self.put_files('.x/a', 'y/.b', 'z')
+        self.dir_edit(self.tmpdir, '-r', '-o', self.tmpfile('z'))
+        self.assertEqual(['.x/a', 'y/.b', 'z'], self.list_tmpdir())
+        self.dir_edit(self.tmpdir, '-r', '-a', '-o', self.tmpfile('.x/a', 'y/.b', 'z'))
+        self.assertEqual(['.x/a', 'y/.b', 'z'], self.list_tmpdir())
+
     def test_dry_run(self):
         """Check that '-d' and '--dry-run' options work."""
         self.put_files('a')
