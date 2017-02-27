@@ -9,6 +9,7 @@
 
 """Rename or remove files in a directory using an editor (e.g. vi)."""
 
+from __future__ import print_function
 import sys
 import os
 import re
@@ -17,6 +18,10 @@ import locale
 import subprocess
 from optparse import OptionParser
 from functools import total_ordering
+from functools import reduce
+
+if sys.version_info < (3, 2):
+    os.fsencode = lambda filename: filename
 
 PROG_NAME = 'dir_edit'
 SIMULATE = False
@@ -33,12 +38,9 @@ class Error(Exception):
 def warn(msg, *args, **_kwargs):
     """Output a warning message to stderr."""
     msg = '%s: %s' % (PROG_NAME, msg % args)
-    print >> sys.stderr, msg
-
-def error(msg, *args, **kwargs):
-    """Output an error message to stderr and exit."""
-    warn(msg, *args, **kwargs)
-    raise Error(msg % args)
+    if sys.version_info < (3, 0):
+        msg = msg.decode(errors='replace')
+    print(msg, file=sys.stderr)
 
 def shellquote(string):
     """Return a quoted version of string suitable for a sh-like shell."""
@@ -49,7 +51,9 @@ def fslog(msg, *args, **_kwargs):
     if not VERBOSE:
         return
     msg = msg % tuple(shellquote(x) for x in args)
-    print msg
+    if sys.version_info < (3, 0):
+        msg = msg.decode(errors='replace')
+    print(msg)
 #
 ##############################################################################
 
@@ -68,7 +72,6 @@ class Path(str):
     self.tail -- the basename of the path
     """
     def __init__(self, string):
-        super(Path, self).__init__(string)
         self.rebuild(string)
     def rebuild(self, string):
         """Reinitialize object from string."""
@@ -92,7 +95,7 @@ class Path(str):
         elif isinstance(other, str):
             return self < Path(other)
         else:
-            return NotImplemented
+            raise TypeError('unorderable types')
     def __hash__(self):
         return self.real.__hash__()
 
@@ -307,13 +310,13 @@ def dir_edit(dirname, filenames, options):
     try:
         os.chdir(dirname)
     except OSError as exc:
-        error('%s: %s', dirname, exc.strerror)
+        raise Error('%s: %s' % (dirname, exc.strerror))
 
     if options.input:
         try:
             file_list = read_input_file(options.input)
         except IOError as exc:
-            error('error reading input file: %s', exc.strerror)
+            raise Error('error reading input file: %s' % (exc.strerror,))
         sanitize_file_list(file_list)
     elif filenames:
         file_list = filenames
@@ -327,24 +330,24 @@ def dir_edit(dirname, filenames, options):
         file_list.sort(key=key)
 
     if not file_list:
-        error('no valid path given for renaming')
+        raise Error('no valid path given for renaming')
 
     if not options.mangle_newlines:
         for filename in file_list:
             if '\n' in filename or '\r' in filename:
-                error('file names with newlines are not supported, try -m!')
+                raise Error('file names with newlines are not supported, try -m!')
 
     TMPDIR = tempfile.mkdtemp(prefix='dir_edit-')
     if options.output:
         try:
             new_file_list = read_input_file(options.output)
         except IOError as exc:
-            error('error reading output file: %s', exc.strerror)
+            raise Error('error reading output file: %s' % (exc.strerror,))
     else:
         tmpfile = os.path.join(TMPDIR, 'file_list.txt')
         nl_r = re.compile(r'[\n\r]+')
-        with open(tmpfile, 'w') as stream:
-            stream.write(''.join([nl_r.sub(' ', e) + '\n' for e in file_list]))
+        with open(tmpfile, 'wb') as stream:
+            stream.write(b''.join([os.fsencode(nl_r.sub(' ', e)) + b'\n' for e in file_list]))
 
         if os.name == 'nt':
             # Windows opens default editor if text file is opened directly:
@@ -356,13 +359,13 @@ def dir_edit(dirname, filenames, options):
         retval = subprocess.call(command, shell=True)
 
         if retval != 0:
-            error('editor command failed: %s', command)
+            raise Error('editor command failed: %s' % (command,))
 
         with open(tmpfile, 'r') as stream:
             new_file_list = [line.rstrip('\n') for line in stream]
 
     if len(file_list) != len(new_file_list):
-        error('new file list has different length than old')
+        raise Error('new file list has different length than old')
 
     # generate mapping and inverse mapping from file lists
     mapping = {}
@@ -372,19 +375,19 @@ def dir_edit(dirname, filenames, options):
         srcpath = Path(srcfile)
         dstpath = Path(dstfile)
         if srcpath in mapping:
-            error('error, two identical entries have different destination:\n'
-                  '%s', '\n'.join(['%s -> %s' % (x, y) for x, y in
-                                   [(inv_mapping[mapping[srcpath]], mapping[srcpath]),
-                                    (srcpath, dstpath)]]))
+            raise Error('error, two identical entries have different destination:\n'
+                        '%s', '\n'.join(['%s -> %s' % (x, y) for x, y in
+                                         [(inv_mapping[mapping[srcpath]], mapping[srcpath]),
+                                          (srcpath, dstpath)]]))
         # empty lines indicate removal
         if not dstfile:
             to_remove.append(srcpath)
             continue
         if dstpath in inv_mapping:
-            error('error, two or more files have the same destination:\n'
-                  '%s', '\n'.join(['%s -> %s' % (x, y) for x, y in
-                                   [(inv_mapping[dstpath], mapping[inv_mapping[dstpath]]),
-                                    (srcpath, dstpath)]]))
+            raise Error('error, two or more files have the same destination:\n'
+                        '%s', '\n'.join(['%s -> %s' % (x, y) for x, y in
+                                         [(inv_mapping[dstpath], mapping[inv_mapping[dstpath]]),
+                                          (srcpath, dstpath)]]))
         # no self loops (need no renaming!)
         if srcpath == dstpath:
             continue
@@ -397,7 +400,7 @@ def dir_edit(dirname, filenames, options):
         fslog('cd %s', os.path.realpath(os.curdir))
 
         need_tmpdir = False
-        for srcpath, dstpath in mapping.iteritems():
+        for srcpath, dstpath in mapping.items():
             if srcpath.real == os.path.dirname(dstpath.real):
                 need_tmpdir = True
                 break
@@ -503,7 +506,8 @@ def main(args=None):
 
     try:
         main_throws(args)
-    except Error:
+    except Error as exc:
+        warn(str(exc))
         sys.exit(1)
 
 if __name__ == '__main__':

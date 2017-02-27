@@ -1,5 +1,8 @@
+# -*- coding: utf-8 -*-
+
 """Test module for dir_edit.py."""
 
+from __future__ import print_function
 import sys
 import os
 import re
@@ -7,7 +10,7 @@ import errno
 import unittest
 import tempfile
 import shutil
-from StringIO import StringIO
+from io import StringIO
 import subprocess
 
 import dir_edit
@@ -22,7 +25,11 @@ def listdir_recursive(top):
 
 def path_content(path):
     """Return file content or '<dir>' for directories."""
-    return '<dir>' if os.path.isdir(path) else open(path).read()
+    if os.path.isdir(path):
+        return '<dir>'
+    else:
+        with open(path) as stream:
+            return stream.read()
 
 def mkdir_p(path):
     """Like os.makedirs(), but ignores existing directories."""
@@ -45,11 +52,19 @@ def dir_edit_external(*args):
     shell = False
     if os.name == 'nt':
         shell = True
-    return subprocess.check_output([prog] + list(args), stderr=subprocess.STDOUT, shell=shell)
+    return subprocess.check_output([prog] + list(args), stderr=subprocess.STDOUT, shell=shell,
+                                   universal_newlines=True)
 
 class DirEditTestCase(unittest.TestCase):
     # pylint: disable=too-many-instance-attributes,too-many-public-methods
     """Main dir_edit.py test class."""
+
+    @classmethod
+    def setUpClass(cls):
+        """Add renamed member functions for Python 2.7."""
+        if sys.version_info < (3, 2):
+            cls.assertRegex = cls.assertRegexpMatches
+            cls.assertRaisesRegex = cls.assertRaisesRegexp
 
     def setUp(self):
         """Create temporary directories, declare attributes."""
@@ -74,7 +89,8 @@ class DirEditTestCase(unittest.TestCase):
         for filename in filenames:
             path = os.path.join(self.tmpdir, filename)
             mkdir_p(os.path.dirname(path))
-            open(path, 'w').write(filename)
+            with open(path, 'w') as stream:
+                stream.write(filename)
 
     def put_dirs(self, *dirnames):
         """Put directories into the temporary directory."""
@@ -84,9 +100,8 @@ class DirEditTestCase(unittest.TestCase):
 
     def tmpfile(self, *filenames):
         """Create a temporary file with list of filenames, return path."""
-        tmpfile = tempfile.NamedTemporaryFile(dir=self.tmpdir2, delete=False)
-        tmpfile.write('\n'.join(filenames) + '\n')
-        tmpfile.close()
+        with tempfile.NamedTemporaryFile(mode='w', dir=self.tmpdir2, delete=False) as tmpfile:
+            tmpfile.write('\n'.join(filenames) + '\n')
         return tmpfile.name
 
     def list_tmpdir(self):
@@ -136,20 +151,20 @@ class DirEditTestCase(unittest.TestCase):
         self.put_files('a/b')
         self.put_dirs('c/d')
         regexp = '(File exists|Cannot create a file when that file already exists)'
-        with self.assertRaisesRegexp(OSError, regexp):
+        with self.assertRaisesRegex(OSError, regexp):
             self.put_dirs('a/b')
-        self.assertEqual(['a/b', 'c/d/'], self.list_tmpdir())
+        self.assertEqual([('a/b', 'a/b'), ('c/d/', '<dir>')], self.list_tmpdir_content())
 
     def test_empty(self):
         """Raise error if called on empty directory."""
-        with self.assertRaisesRegexp(dir_edit.Error, 'no valid path given for renaming'):
+        with self.assertRaisesRegex(dir_edit.Error, 'no valid path given for renaming'):
             self.dir_edit(self.tmpdir)
 
     def test_main(self):
         """Test main function for coverage."""
         original_sys_exit = sys.exit
         sys.exit = fake_sys_exit
-        with self.assertRaisesRegexp(Exception, r'^sys.exit\(0\)$'):
+        with self.assertRaisesRegex(Exception, r'^sys.exit\(0\)$'):
             dir_edit.main(['--help'])
         sys.exit = original_sys_exit
 
@@ -157,7 +172,7 @@ class DirEditTestCase(unittest.TestCase):
         """Test main function error for coverage."""
         original_sys_exit = sys.exit
         sys.exit = fake_sys_exit
-        with self.assertRaisesRegexp(Exception, r'^sys.exit\(1\)$'):
+        with self.assertRaisesRegex(Exception, r'^sys.exit\(1\)$'):
             dir_edit.main([os.path.join(self.tmpdir, 'nonexist')])
         sys.exit = original_sys_exit
 
@@ -165,16 +180,17 @@ class DirEditTestCase(unittest.TestCase):
         """Check that '-h' and '--help' options work."""
         help_output1 = dir_edit_external('-h')
         help_output2 = dir_edit_external('--help')
-        self.assertRegexpMatches(help_output1, '^Usage: dir_edit')
+        self.assertRegex(help_output1, '^Usage: dir_edit')
         self.assertEqual(help_output1, help_output2)
 
     def test_version(self):
         """Check that the '--version' option works."""
         here = os.path.abspath(os.path.dirname(__file__))
         setup_prog = os.path.join(here, 'setup.py')
-        version = subprocess.check_output(['python', setup_prog, '--version'])
+        version = subprocess.check_output(['python', setup_prog, '--version'],
+                                          universal_newlines=True)
         version_output = dir_edit_external('--version')
-        self.assertRegexpMatches(version_output, '^dir_edit.py ' + re.escape(version))
+        self.assertRegex(version_output, '^dir_edit.py ' + re.escape(version))
 
     def test_editor(self):
         """Check that '-e' and '--editor' options work."""
@@ -190,20 +206,20 @@ class DirEditTestCase(unittest.TestCase):
         self.assertEqual(['b1', 'b2'], self.list_tmpdir())
         self.dir_edit(self.tmpdir, '--editor', pysed + ' b c')
         self.assertEqual(['c1', 'c2'], self.list_tmpdir())
-        with self.assertRaisesRegexp(dir_edit.Error, 'editor command failed'):
+        with self.assertRaisesRegex(dir_edit.Error, 'editor command failed'):
             self.dir_edit(self.tmpdir, '-e' 'python -c "exit(1)"')
 
     def test_nonexisting(self):
         """Raise error if directory does not exist."""
         regexp = 'nonexist: (No such file or directory|The system cannot find the file specified)'
-        with self.assertRaisesRegexp(dir_edit.Error, regexp):
+        with self.assertRaisesRegex(dir_edit.Error, regexp):
             self.dir_edit(os.path.join(self.tmpdir, 'nonexist'))
 
     def test_nodirectory(self):
         """Raise error if path is no directory."""
         self.put_files('nodirectory')
         regexp = 'nodirectory: (Not a directory|The directory name is invalid)'
-        with self.assertRaisesRegexp(dir_edit.Error, regexp):
+        with self.assertRaisesRegex(dir_edit.Error, regexp):
             self.dir_edit(os.path.join(self.tmpdir, 'nodirectory'))
 
     def test_output(self):
@@ -213,7 +229,7 @@ class DirEditTestCase(unittest.TestCase):
         self.assertEqual(['b1', 'b2'], self.list_tmpdir())
         self.dir_edit(self.tmpdir, '--output', self.tmpfile('c1', 'c2'))
         self.assertEqual(['c1', 'c2'], self.list_tmpdir())
-        with self.assertRaisesRegexp(dir_edit.Error, 'error reading output file'):
+        with self.assertRaisesRegex(dir_edit.Error, 'error reading output file'):
             self.dir_edit(self.tmpdir, '-o', os.path.join(self.tmpdir2, 'nonexist'))
 
     def test_input(self):
@@ -223,10 +239,10 @@ class DirEditTestCase(unittest.TestCase):
         self.assertEqual(['a1', 'b2'], self.list_tmpdir())
         self.dir_edit(self.tmpdir, '--input', self.tmpfile('b2'), '-o', self.tmpfile('c2'))
         self.assertEqual(['a1', 'c2'], self.list_tmpdir())
-        with self.assertRaisesRegexp(dir_edit.Error, 'identical entries'):
+        with self.assertRaisesRegex(dir_edit.Error, 'identical entries'):
             self.dir_edit(self.tmpdir, '-i', self.tmpfile('c2', 'c2'),
                           '-o', self.tmpfile('d2', 'd2'))
-        with self.assertRaisesRegexp(dir_edit.Error, 'error reading input file'):
+        with self.assertRaisesRegex(dir_edit.Error, 'error reading input file'):
             self.dir_edit(self.tmpdir, '-i', os.path.join(self.tmpdir2, 'nonexist'))
         self.assertEqual(['a1', 'c2'], self.list_tmpdir())
 
@@ -242,7 +258,7 @@ class DirEditTestCase(unittest.TestCase):
     def test_newlines(self):
         """Check that '-m' and '--mangle-newlines' options work."""
         self.put_files('a\r\n1', 'a\n\n2')
-        with self.assertRaisesRegexp(dir_edit.Error, 'file names with newlines are not supported'):
+        with self.assertRaisesRegex(dir_edit.Error, 'file names with newlines are not supported'):
             self.dir_edit(self.tmpdir)
         self.dir_edit(self.tmpdir, '-m', '-e', 'python -c "exit(0)"')
         self.assertEqual(['a 1', 'a 2'], self.list_tmpdir())
@@ -253,14 +269,14 @@ class DirEditTestCase(unittest.TestCase):
     def test_same_length(self):
         """Abort if input and output have different length."""
         self.put_files('a1', 'a2')
-        with self.assertRaisesRegexp(dir_edit.Error, 'has different length'):
+        with self.assertRaisesRegex(dir_edit.Error, 'has different length'):
             self.dir_edit(self.tmpdir, '-o', self.tmpfile('b2'))
         self.assertEqual(['a1', 'a2'], self.list_tmpdir())
 
     def test_same_destination(self):
         """Abort if rename destination is the same for two or more files."""
         self.put_files('a1', 'a2')
-        with self.assertRaisesRegexp(dir_edit.Error, 'same destination'):
+        with self.assertRaisesRegex(dir_edit.Error, 'same destination'):
             self.dir_edit(self.tmpdir, '-o', self.tmpfile('b', 'b'))
         self.assertEqual(['a1', 'a2'], self.list_tmpdir())
 
@@ -399,7 +415,7 @@ class DirEditTestCase(unittest.TestCase):
         self.setup_stdout()
         self.dir_edit(self.tmpdir, '-o', self.tmpfile('', 'x', ''))
         self.restore_stdout()
-        self.assertRegexpMatches(self.error, 'not removing directory a: not empty')
+        self.assertRegex(self.error, 'not removing directory a: not empty')
         self.assertEqual(['a/b', 'x/y/z1', 'x/y/z2', 'z/z/z/'], self.list_tmpdir())
         self.dir_edit(self.tmpdir, '-R', '-o', self.tmpfile('', 'x', ''))
         self.assertEqual(['x/y/z1', 'x/y/z2'], self.list_tmpdir())
@@ -423,7 +439,7 @@ class DirEditTestCase(unittest.TestCase):
         self.put_files('a')
         # TODO: Better error message!
         regexp = '(No such file or directory|The system cannot find the path specified)'
-        with self.assertRaisesRegexp(OSError, regexp):
+        with self.assertRaisesRegex(OSError, regexp):
             self.dir_edit(self.tmpdir, '-S', '-o', self.tmpfile('x/y'))
         self.assertEqual(['a'], self.list_tmpdir())
 
@@ -442,7 +458,7 @@ class DirEditTestCase(unittest.TestCase):
         self.dir_edit(self.tmpdir, '-r', 'a', '-o', self.tmpfile('b/y'))
         self.restore_stdout()
         self.assertEqual([('a/x', 'a/x'), ('b/y', 'b/y')], self.list_tmpdir_content())
-        self.assertRegexpMatches(self.error, 'path b/y already exists, skip')
+        self.assertRegex(self.error, 'path b/y already exists, skip')
 
     def test_dest_exists_safe(self):
         """Check that existing destination error is handled in safe mode."""
@@ -451,7 +467,7 @@ class DirEditTestCase(unittest.TestCase):
         self.dir_edit(self.tmpdir, '-S', '-i', self.tmpfile('a'), '-o', self.tmpfile('b'))
         self.restore_stdout()
         self.assertEqual([('a', 'a'), ('b', 'b')], self.list_tmpdir_content())
-        self.assertRegexpMatches(self.error, 'path b already exists, skip')
+        self.assertRegex(self.error, 'path b already exists, skip')
 
     def test_reldir(self):
         """Check that a relative directory works."""
@@ -470,16 +486,17 @@ class DirEditTestCase(unittest.TestCase):
         self.dir_edit(self.tmpdir, '-i', self.tmpfile('./a'), '-o', self.tmpfile('a'))
         # for coverage:
         self.assertFalse(dir_edit.Path('a') == [])
+        self.assertTrue(dir_edit.Path('a') == 'a')
         self.assertTrue(dir_edit.Path('a') < dir_edit.Path('b'))
         self.assertTrue(dir_edit.Path('a') < 'b')
-        self.assertTrue(dir_edit.Path('a') < [])
+        self.assertRaises(TypeError, lambda: dir_edit.Path('a') < [])
 
     def test_multibyte_error(self):
         """Check that multibyte error message works."""
         regexp = '(No such file or directory|The system cannot find the file specified)'
         with self.assertRaisesRegexp(dir_edit.Error, regexp):
             self.dir_edit(os.path.join(self.tmpdir, '\xc3\xa4'))
-        with self.assertRaisesRegexp(dir_edit.Error, regexp):
+        with self.assertRaisesRegex(dir_edit.Error, regexp):
             self.dir_edit(os.path.join(self.tmpdir, '\xe4'))
 
 @unittest.skipIf(os.name == 'nt', 'not yet supported on Windows')
@@ -492,7 +509,7 @@ class DirEditDryRunVerboseTestCase(DirEditTestCase):
         finally:
             self.restore_stdout()
         for command in self.output.split('\n'):
-            subprocess.check_output(command, shell=True)
+            subprocess.check_output(command, shell=True, universal_newlines=True)
     def test_dry_run(self):
         """Not necessary here."""
         pass

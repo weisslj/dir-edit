@@ -9,3 +9,5 @@ exclude_lines =
     if __name__ == .__main__.:
     # Ignore Windows in coverage report:
     if os.name == 'nt':
+    # Ignore Python 2.7 branches:
+    if sys\.version_info < \(3, [0-9]+\):
