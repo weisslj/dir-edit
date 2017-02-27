@@ -40,7 +40,7 @@ def error(msg, *args, **kwargs):
     raise Error(msg % args)
 
 def shellquote(string):
-    """Return a quoted version of s suitable for a sh-like shell."""
+    """Return a quoted version of string suitable for a sh-like shell."""
     return "'" + string.replace("'", "'\\''") + "'"
 
 def fslog(msg, *args, **_kwargs):
