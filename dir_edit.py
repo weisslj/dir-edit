@@ -286,11 +286,10 @@ def read_dir_recursive(path, all_entries=False):
         for name in files:
             if all_entries or not name.startswith('.'):
                 paths.append(os.path.normpath(os.path.join(root, name)))
+        if root != path and not dirs and not files:
+            paths.append(os.path.normpath(root))
         if not all_entries:
             dirs[:] = [name for name in dirs if not name.startswith('.')]
-        if root != path and not dirs and not files:
-            if all_entries or not root.startswith('.'):
-                paths.append(os.path.normpath(root))
     return paths
 
 def decompose_mapping(graph):

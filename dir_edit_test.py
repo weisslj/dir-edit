@@ -292,6 +292,12 @@ class DirEditTestCase(unittest.TestCase):
         self.dir_edit(os.path.join(self.tmpdir, '.x'), '-r', '-o', self.tmpfile('c'))
         self.assertEqual(['.x/c'], self.list_tmpdir())
 
+    def test_only_leaf_dirs(self):
+        """Check that only empty directories are listed in recursive mode."""
+        self.put_dirs('a/b/c', 'd/e/f/.g')
+        self.put_files('h/i/j', 'k/l/m/.n')
+        self.dir_edit(self.tmpdir, '-r', '-o', self.tmpfile('a/b/c', 'h/i/j'))
+
     def test_all_recursive(self):
         """Check that '-a' option works in recursive mode."""
         self.put_files('.x/a', 'y/.b', 'z')
