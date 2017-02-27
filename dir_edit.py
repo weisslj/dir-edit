@@ -270,8 +270,6 @@ def read_dir(path, all_entries=False):
     """Return a list of paths in directory at path. If all_entries is not
     true, exclude all entries starting with a dot (.).
     """
-    if not os.path.exists(path):
-        return []
     filenames = os.listdir(path)
     if not all_entries:
         return [filename for filename in filenames if not filename.startswith('.')]
