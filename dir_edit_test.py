@@ -34,6 +34,10 @@ def mkdir_p(path):
         else:
             raise
 
+def fake_sys_exit(arg=0):
+    """Raise exception instead of exiting, for testing."""
+    raise Exception('sys.exit(%r)' % (arg,))
+
 def dir_edit_external(*args):
     """Call dir_edit.py as external process."""
     here = os.path.abspath(os.path.dirname(__file__))
@@ -128,6 +132,22 @@ class DirEditTestCase(unittest.TestCase):
         """Raise error if called on empty directory."""
         with self.assertRaisesRegexp(dir_edit.Error, 'no valid path given for renaming'):
             self.dir_edit(self.tmpdir)
+
+    def test_main(self):
+        """Test main function for coverage."""
+        original_sys_exit = sys.exit
+        sys.exit = fake_sys_exit
+        with self.assertRaisesRegexp(Exception, r'^sys.exit\(0\)$'):
+            dir_edit.main(['--help'])
+        sys.exit = original_sys_exit
+
+    def test_main_error(self):
+        """Test main function error for coverage."""
+        original_sys_exit = sys.exit
+        sys.exit = fake_sys_exit
+        with self.assertRaisesRegexp(Exception, r'^sys.exit\(1\)$'):
+            dir_edit.main([os.path.join(self.tmpdir, 'nonexist')])
+        sys.exit = original_sys_exit
 
     def test_help(self):
         """Check that '-h' and '--help' options work."""
