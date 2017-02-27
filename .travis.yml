@@ -6,4 +6,4 @@ install:
 script:
   - coverage run test_dir_edit.py
 after_success:
-  - coverage report
+  - coverage report --fail-under=100
