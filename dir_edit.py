@@ -375,19 +375,19 @@ def dir_edit(args):
         srcpath = Path(srcfile)
         dstpath = Path(dstfile)
         if srcpath in mapping:
-            raise Error('error, two identical entries have different destination:\n'
-                        '%s', '\n'.join(['%s -> %s' % (x, y) for x, y in
-                                         [(inv_mapping[mapping[srcpath]], mapping[srcpath]),
-                                          (srcpath, dstpath)]]))
+            raise Error('error, two identical entries have different destination:\n%s' %
+                        ('\n'.join(['%s -> %s' % (x, y) for x, y in
+                                    [(inv_mapping[mapping[srcpath]], mapping[srcpath]),
+                                     (srcpath, dstpath)]]),))
         # empty lines indicate removal
         if not dstfile:
             to_remove.append(srcpath)
             continue
         if dstpath in inv_mapping:
-            raise Error('error, two or more files have the same destination:\n'
-                        '%s', '\n'.join(['%s -> %s' % (x, y) for x, y in
-                                         [(inv_mapping[dstpath], mapping[inv_mapping[dstpath]]),
-                                          (srcpath, dstpath)]]))
+            raise Error('error, two or more files have the same destination:\n%s' %
+                        ('\n'.join(['%s -> %s' % (x, y) for x, y in
+                                    [(inv_mapping[dstpath], mapping[inv_mapping[dstpath]]),
+                                     (srcpath, dstpath)]]),))
         # no self loops (need no renaming!)
         if srcpath == dstpath:
             continue
