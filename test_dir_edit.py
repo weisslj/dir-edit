@@ -18,14 +18,17 @@ import dir_edit
 def listdir_recursive(top):
     """Yield leaf nodes of 'top' directory recursively."""
     for root, dirs, files in os.walk(top):
-        for name in files:
+        not_dirs = files + [name for name in dirs if os.path.islink(os.path.join(root, name))]
+        for name in not_dirs:
             yield os.path.relpath(os.path.join(root, name), top).replace(os.sep, '/')
         if root != top and not dirs and not files:
             yield os.path.relpath(root, top).replace(os.sep, '/') + '/'
 
 def path_content(path):
     """Return file content or '<dir>' for directories."""
-    if os.path.isdir(path):
+    if os.path.islink(path):
+        return '-> ' + os.readlink(path)
+    elif os.path.isdir(path):
         return '<dir>'
     else:
         with open(path) as stream:
@@ -491,6 +494,29 @@ class DirEditTestCase(unittest.TestCase):
         self.assertTrue(dir_edit.Path('a') < 'b')
         self.assertRaises(TypeError, lambda: dir_edit.Path('a') < [])
 
+    @unittest.skipIf(os.name == 'nt', 'symlinks not supported on Windows')
+    def test_realpath_symlinks(self):
+        """Check that symlinks are correctly resolved (but not for last element)."""
+        self.put_files('i', 'x/a')
+        os.symlink('i', os.path.join(self.tmpdir, 'j'))
+        os.symlink('q', os.path.join(self.tmpdir, 'k'))
+        os.symlink('a', os.path.join(self.tmpdir, 'x/b'))
+        os.symlink('r', os.path.join(self.tmpdir, 'x/c'))
+        os.symlink('x', os.path.join(self.tmpdir, 'y'))
+        self.dir_edit(self.tmpdir, '-o', self.tmpfile('i', 'j', 'k', 'x', 'y'))
+        self.dir_edit(self.tmpdir, '-r', '-o',
+                      self.tmpfile('i', 'j', 'k', 'x/a', 'x/b', 'x/c', 'y'))
+        self.assertEqual([('i', 'i'), ('j', '-> i'), ('k', '-> q'),
+                          ('x/a', 'x/a'), ('x/b', '-> a'), ('x/c', '-> r'),
+                          ('y', '-> x')],
+                         self.list_tmpdir_content())
+        self.dir_edit(self.tmpdir, '-r', '-o',
+                      self.tmpfile('j', 'i', 'k', 'x/b', 'x/a', 'x/c', 'y'))
+        self.assertEqual([('i', '-> i'), ('j', 'i'), ('k', '-> q'),
+                          ('x/a', '-> a'), ('x/b', 'x/a'), ('x/c', '-> r'),
+                          ('y', '-> x')],
+                         self.list_tmpdir_content())
+
     def test_multibyte_error(self):
         """Check that multibyte error message works."""
         regexp = '(No such file or directory|The system cannot find the file specified)'
@@ -550,6 +576,11 @@ class DirEditDryRunVerboseTestCase(DirEditTestCase):
         # TODO: Fix bug!
         pass
     def test_newlines(self):
+        """Exclude test case for now."""
+        # TODO: Fix bug!
+        pass
+    @unittest.skipIf(os.name == 'nt', 'symlinks not supported on Windows')
+    def test_realpath_symlinks(self):
         """Exclude test case for now."""
         # TODO: Fix bug!
         pass

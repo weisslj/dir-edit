@@ -156,7 +156,7 @@ def path_remove(path, recursive=False):
 
 def path_rename(src, dst):
     """Rename src path to dst."""
-    if os.path.exists(dst):
+    if os.path.lexists(dst):
         warn('path %s already exists, skip', dst)
         return
     fslog('mv %s %s', src, dst)
@@ -182,7 +182,7 @@ def path_renames(src, dst):
     with the same name, e.g.:
     mv x x/new_x
     """
-    if os.path.exists(dst):
+    if os.path.lexists(dst):
         warn('path %s already exists, skip', dst)
         return
     if os.path.commonprefix([src.real, os.path.dirname(dst.real)]) == src.real:
@@ -191,7 +191,7 @@ def path_renames(src, dst):
         dir_make_all(dst.head)
         path_rename(tmp_src, dst)
         return
-    if dst.head and not os.path.exists(dst.head):
+    if dst.head and not os.path.lexists(dst.head):
         dir_make_all(dst.head)
     path_rename(src, dst)
     # FIXME: Restructure!
@@ -241,7 +241,7 @@ def numkey_path(path):
 
 def check_input_path(path):
     """Return true if path is a valid input path, false otherwise."""
-    if not path or not os.path.exists(path):
+    if not path or not os.path.lexists(path):
         return False
     return True
 
@@ -272,7 +272,8 @@ def read_dir_recursive(path, all_entries=False):
     """
     paths = []
     for root, dirs, files in os.walk(path):
-        for name in files:
+        not_dirs = files + [name for name in dirs if os.path.islink(os.path.join(root, name))]
+        for name in not_dirs:
             if all_entries or not name.startswith('.'):
                 paths.append(os.path.normpath(os.path.join(root, name)))
         if root != path and not dirs and not files:
