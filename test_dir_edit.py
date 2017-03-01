@@ -486,7 +486,9 @@ class DirEditTestCase(unittest.TestCase):
         """Check that paths are correctly compared."""
         self.put_files('a')
         self.dir_edit(self.tmpdir, '-o', self.tmpfile('x/..//a'))
+        self.dir_edit(self.tmpdir, '-o', self.tmpfile('a/'))
         self.dir_edit(self.tmpdir, '-i', self.tmpfile('./a'), '-o', self.tmpfile('a'))
+        self.assertEqual([('a', 'a')], self.list_tmpdir_content())
         # for coverage:
         self.assertFalse(dir_edit.Path('a') == [])
         self.assertTrue(dir_edit.Path('a') == 'a')
