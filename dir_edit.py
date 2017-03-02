@@ -254,7 +254,7 @@ def read_input_file(filename):
     Can throw exception IOError.
     """
     with open(filename, 'r') as stream:
-        file_list = [line.rstrip('\n') for line in stream]
+        file_list = [line.rstrip('\r\n') for line in stream]
     return file_list
 
 def read_dir(path, all_entries=False):
@@ -363,7 +363,7 @@ def dir_edit(args):
             raise Error('editor command failed: %s' % (command,))
 
         with open(tmpfile, 'r') as stream:
-            new_file_list = [line.rstrip('\n') for line in stream]
+            new_file_list = [line.rstrip('\r\n') for line in stream]
 
     if len(file_list) != len(new_file_list):
         raise Error('new file list has different length than old')
