@@ -347,8 +347,9 @@ def dir_edit(args):
     else:
         tmpfile = os.path.join(TMPDIR, 'file_list.txt')
         nl_r = re.compile(r'[\n\r]+')
+        nl = os.linesep.encode()
         with open(tmpfile, 'wb') as stream:
-            stream.write(b''.join([os.fsencode(nl_r.sub(' ', e)) + b'\n' for e in file_list]))
+            stream.write(b''.join([os.fsencode(nl_r.sub(' ', e)) + nl for e in file_list]))
 
         if os.name == 'nt':
             # Windows opens default editor if text file is opened directly:
