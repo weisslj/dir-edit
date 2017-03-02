@@ -80,6 +80,7 @@ class Path(str):
             head, tail = os.path.split(head)
         self.string = string
         self.real = os.path.join(os.path.realpath(head), tail)
+        self.realcase = os.path.normcase(self.real)
         self.head = head
         self.tail = tail
     def __eq__(self, other):
@@ -169,6 +170,7 @@ def path_least_common_ancestor(path1, path2):
     e.g.
     path_least_common_ancestor(Path('a/b/c'), Path('a/b/d')) == '/.../a/b'
     """
+    # FIXME: Does not return when drive specifications differ!
     real1, real2 = path1.real, path2.real
     while real1 != real2:
         if len(real1) > len(real2):
@@ -195,8 +197,8 @@ def path_renames(src, dst):
         dir_make_all(dst.head)
     path_rename(src, dst)
     # FIXME: Restructure!
-    lca = path_least_common_ancestor(src, dst)
     if src.head and src.tail and not os.path.isabs(src):
+        lca = path_least_common_ancestor(src, dst)
         head, tail = os.path.split(src.real)
         while head != lca:
             content = [tail] if SIMULATE else []
@@ -296,7 +298,7 @@ def decompose_mapping(graph):
         while dst in graph:
             dst = graph.pop(dst)
             path.append(dst)
-        if src == path[-1]:
+        if src.realcase == path[-1].realcase:
             cycles[src] = path
         else:
             paths[src] = path

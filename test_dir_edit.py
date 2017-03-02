@@ -519,6 +519,14 @@ class DirEditTestCase(unittest.TestCase):
                           ('y', '-> x')],
                          self.list_tmpdir_content())
 
+    def test_same_case(self):
+        """Test that case of files can alwasy be changed (even on Windows)."""
+        # Recursive mode (y/A -> Y/a) is missing deliberately, too dangerous.
+        self.put_files('x')
+        self.put_dirs('Z')
+        self.dir_edit(self.tmpdir, '-o', self.tmpfile('X', 'z'))
+        self.assertEqual(['X', 'z/'], self.list_tmpdir())
+
     def test_multibyte_error(self):
         """Check that multibyte error message works."""
         regexp = '(No such file or directory|The system cannot find the file specified)'
