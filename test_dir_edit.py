@@ -520,7 +520,7 @@ class DirEditTestCase(unittest.TestCase):
                          self.list_tmpdir_content())
 
     def test_same_case(self):
-        """Test that case of files can alwasy be changed (even on Windows)."""
+        """Test that case of files can always be changed (even on Windows)."""
         # Recursive mode (y/A -> Y/a) is missing deliberately, too dangerous.
         self.put_files('x')
         self.put_dirs('Z')
