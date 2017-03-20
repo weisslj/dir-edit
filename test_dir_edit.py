@@ -12,6 +12,8 @@ import tempfile
 import shutil
 from io import StringIO
 import subprocess
+import random
+import string
 
 import dir_edit
 
@@ -316,6 +318,40 @@ class DirEditTestCase(unittest.TestCase):
         self.assertEqual([('n', 'm'), ('v', 'n'), ('x', 'v')],
                          self.list_tmpdir_content())
 
+    def test_random(self):
+        """Test random mapping, meant for repeated runs to find counter-example."""
+        universe = string.ascii_lowercase
+        src_files = random.sample(universe, random.randint(1, len(universe)))
+        dst_files = []
+        for _src in src_files:
+            unused = set(universe) - set(dst_files)
+            dst_files.append(random.choice(list(unused)))
+        result_content = sorted(zip(dst_files, src_files))
+        self.put_files(*src_files)
+        self.dir_edit(self.tmpdir, '-i', self.tmpfile(*src_files), '-o', self.tmpfile(*dst_files))
+        self.assertEqual(result_content, self.list_tmpdir_content())
+
+    def test_random_shuffle(self):
+        """Test random shuffle mapping, meant for repeated runs to find counter-example."""
+        universe = string.ascii_lowercase
+        src_files = random.sample(universe, random.randint(1, len(universe)))
+        dst_files = random.sample(src_files, len(src_files))
+        result_content = sorted(zip(dst_files, src_files))
+        self.put_files(*src_files)
+        self.dir_edit(self.tmpdir, '-i', self.tmpfile(*src_files), '-o', self.tmpfile(*dst_files))
+        self.assertEqual(result_content, self.list_tmpdir_content())
+
+    def test_random_path(self):
+        """Test random path mapping, meant for repeated runs to find counter-example."""
+        universe = string.ascii_lowercase
+        src_files = random.sample(universe, random.randint(1, len(universe) - 1))
+        unused = set(universe) - set(src_files)
+        dst_files = src_files[1:] + [random.choice(list(unused))]
+        result_content = sorted(zip(dst_files, src_files))
+        self.put_files(*src_files)
+        self.dir_edit(self.tmpdir, '-i', self.tmpfile(*src_files), '-o', self.tmpfile(*dst_files))
+        self.assertEqual(result_content, self.list_tmpdir_content())
+
     def test_remove(self):
         """Test file removal through empty lines."""
         self.put_files('a', 'b')
@@ -569,6 +605,18 @@ class DirEditDryRunVerboseTestCase(DirEditTestCase):
         # TODO: Fix bug!
         pass
     def test_path_bug(self):
+        """Exclude test case for now."""
+        # TODO: Fix bug!
+        pass
+    def test_random(self):
+        """Exclude test case for now."""
+        # TODO: Fix bug!
+        pass
+    def test_random_shuffle(self):
+        """Exclude test case for now."""
+        # TODO: Fix bug!
+        pass
+    def test_random_path(self):
         """Exclude test case for now."""
         # TODO: Fix bug!
         pass
