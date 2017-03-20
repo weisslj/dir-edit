@@ -309,6 +309,13 @@ class DirEditTestCase(unittest.TestCase):
         self.assertEqual([('a', 'a'), ('b', 'b'), ('c', 'c'), ('d', 'd')],
                          self.list_tmpdir_content())
 
+    def test_path_bug(self):
+        """Regression test to trigger rename path bug in Python 2."""
+        self.put_files('m', 'n', 'v')
+        self.dir_edit(self.tmpdir, '-o', self.tmpfile('n', 'v', 'x'))
+        self.assertEqual([('n', 'm'), ('v', 'n'), ('x', 'v')],
+                         self.list_tmpdir_content())
+
     def test_remove(self):
         """Test file removal through empty lines."""
         self.put_files('a', 'b')
@@ -558,6 +565,10 @@ class DirEditDryRunVerboseTestCase(DirEditTestCase):
         # TODO: Fix bug!
         pass
     def test_path(self):
+        """Exclude test case for now."""
+        # TODO: Fix bug!
+        pass
+    def test_path_bug(self):
         """Exclude test case for now."""
         # TODO: Fix bug!
         pass

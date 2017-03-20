@@ -284,7 +284,7 @@ def read_dir_recursive(path, all_entries=False):
             dirs[:] = [name for name in dirs if not name.startswith('.')]
     return paths
 
-def decompose_mapping(graph):
+def decompose_mapping(graph, inv_graph):
     """Decompose a mapping ('bijective' bipartite graph) into
     paths and cycles and returns them.
 
@@ -292,8 +292,13 @@ def decompose_mapping(graph):
     """
     paths = {}
     cycles = {}
+    srcs = set(graph.keys()) - set(inv_graph.keys())
     while graph:
-        src, dst = graph.popitem()
+        try:
+            src = srcs.pop()
+            dst = graph.pop(src)
+        except KeyError:
+            src, dst = graph.popitem()
         path = [src, dst]
         while dst in graph:
             dst = graph.pop(dst)
@@ -409,7 +414,7 @@ def dir_edit(args):
                 need_tmpdir = True
                 break
 
-        paths, cycles = decompose_mapping(mapping)
+        paths, cycles = decompose_mapping(mapping, inv_mapping)
 
         if not need_tmpdir and cycles:
             need_tmpdir = True
