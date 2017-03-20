@@ -445,15 +445,6 @@ class DirEditTestCase(unittest.TestCase):
         self.dir_edit(self.tmpdir, '-r', '-o', self.tmpfile('x/b/c/d'))
         self.assertEqual(['x/b/c/d'], self.list_tmpdir())
 
-    # TODO: Fix bug!
-    # def test_recursive_fail2(self):
-    #     """Test that recursive mode works."""
-    #     self.put_files('x/a')
-    #     self.dir_edit(self.tmpdir, '-r', '-o', self.tmpfile('z/c'))
-    #     self.assertEqual(['x/', 'z/c'], self.list_tmpdir())
-    #     self.dir_edit(self.tmpdir, '--recursive', '-o', self.tmpfile('y', 'x/y/b'))
-    #     self.assertEqual(['x/y/b', 'y/', 'z/'], self.list_tmpdir())
-
     def test_recursive_remove(self):
         """Test that recursive remove works."""
         self.put_files('a/b', 'x/y/z1', 'x/y/z2')
