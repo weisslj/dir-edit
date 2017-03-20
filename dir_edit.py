@@ -243,9 +243,8 @@ def read_dir_recursive(path, all_entries=False):
 def decompose_mapping(graph, inv_graph):
     """Decompose a mapping ('bijective' bipartite graph) into
     paths and cycles and returns them.
-
-    Attention: Afterwards, graph will be empty!
     """
+    graph = graph.copy()
     paths = {}
     cycles = {}
     srcs = set(graph.keys()) - set(inv_graph.keys())
@@ -266,78 +265,12 @@ def decompose_mapping(graph, inv_graph):
             paths[src] = path
     return paths, cycles
 
-
-def dir_edit(args):
-    """Main functionality."""
-
-    global TMPDIR
-
-    try:
-        os.chdir(args.dir)
-    except OSError as exc:
-        raise Error('%s: %s' % (args.dir, exc.strerror))
-
-    if args.input:
-        try:
-            file_list = read_input_file(args.input)
-        except IOError as exc:
-            raise Error('error reading input file: %s' % (exc.strerror,))
-        sanitize_file_list(file_list)
-    elif args.files:
-        file_list = args.files
-        sanitize_file_list(file_list)
-    else:
-        if not args.recursive:
-            file_list = read_dir(os.curdir, args.all)
-        else:
-            file_list = read_dir_recursive(os.curdir, args.all)
-        key = textkey_path if not args.numeric_sort else numkey_path
-        file_list.sort(key=key)
-
-    if not file_list:
-        raise Error('no valid path given for renaming')
-
-    if not args.mangle_newlines:
-        for filename in file_list:
-            if '\n' in filename or '\r' in filename:
-                raise Error('file names with newlines are not supported, try -m!')
-
-    TMPDIR = tempfile.mkdtemp(prefix='dir_edit-')
-    if args.output:
-        try:
-            new_file_list = read_input_file(args.output)
-        except IOError as exc:
-            raise Error('error reading output file: %s' % (exc.strerror,))
-    else:
-        tmpfile = os.path.join(TMPDIR, 'file_list.txt')
-        nl_r = re.compile(r'[\n\r]+')
-        nl = os.linesep.encode()
-        with open(tmpfile, 'wb') as stream:
-            stream.write(b''.join([os.fsencode(nl_r.sub(' ', e)) + nl for e in file_list]))
-
-        if os.name == 'nt':
-            # Windows opens default editor if text file is opened directly:
-            command = [tmpfile]
-            if args.editor:
-                command = args.editor + ' ' + subprocess.list2cmdline(command)
-        else:
-            command = args.editor + ' ' + shellquote(tmpfile)
-        retval = subprocess.call(command, shell=True)
-
-        if retval != 0:
-            raise Error('editor command failed: %s' % (command,))
-
-        with open(tmpfile, 'r') as stream:
-            new_file_list = [line.rstrip('\r\n') for line in stream]
-
-    if len(file_list) != len(new_file_list):
-        raise Error('new file list has different length than old')
-
-    # generate mapping and inverse mapping from file lists
+def generate_mapping(input_file_list, output_file_list):
+    """Generate mapping and inverse mapping from file lists."""
     mapping = {}
     inv_mapping = {}
     to_remove = []
-    for srcfile, dstfile in zip(file_list, new_file_list):
+    for srcfile, dstfile in zip(input_file_list, output_file_list):
         srcpath = os.path.relpath(srcfile)
         # empty lines indicate removal
         if not dstfile:
@@ -359,46 +292,124 @@ def dir_edit(args):
             continue
         mapping[srcpath] = dstpath
         inv_mapping[dstpath] = srcpath
+    return mapping, inv_mapping, to_remove
 
-    if mapping or to_remove:
-
-        # log directory change
-        fslog('cd %s', os.path.realpath(os.curdir))
-
-        need_tmpdir = False
-        for srcpath, dstpath in mapping.items():
-            if srcpath == os.path.dirname(dstpath):
-                need_tmpdir = True
-                break
-
-        paths, cycles = decompose_mapping(mapping, inv_mapping)
-
-        if not need_tmpdir and cycles:
-            need_tmpdir = True
-
-        if need_tmpdir:
-            fslog('mkdir %s', TMPDIR)
-
-        for srcpath in to_remove:
-            path_remove(srcpath, args.remove_recursive)
-
-        rename_func = rev_redux_rename if args.safe else rev_redux_renames
-
-        for path in paths.values():
-            reduce(rename_func, reversed(path))
-
-        for cycle in cycles.values():
-            tmppath = os.path.join(TMPDIR, 'c_' + os.path.basename(cycle[0]))
-            path_rename(cycle[0], tmppath)
-            cycle[0] = tmppath
-            reduce(rename_func, reversed(cycle))
-
-        if need_tmpdir:
-            fslog('rmdir %s', TMPDIR)
-
-    if not args.output:
+def get_file_list_from_user(file_list, args):
+    """Return user-edited file_list or raise error."""
+    tmpdir = tempfile.mkdtemp(prefix='dir_edit-')
+    tmpfile = os.path.join(tmpdir, 'file_list.txt')
+    nl_r = re.compile(r'[\n\r]+')
+    nl = os.linesep.encode()
+    with open(tmpfile, 'wb') as stream:
+        stream.write(b''.join([os.fsencode(nl_r.sub(' ', e)) + nl for e in file_list]))
+    if os.name == 'nt':
+        # Windows opens default editor if text file is opened directly:
+        command = [tmpfile]
+        if args.editor:
+            command = args.editor + ' ' + subprocess.list2cmdline(command)
+    else:
+        command = args.editor + ' ' + shellquote(tmpfile)
+    try:
+        subprocess.check_call(command, shell=True)
+        with open(tmpfile, 'r') as stream:
+            return [line.rstrip('\r\n') for line in stream]
+    except subprocess.CalledProcessError:
+        raise Error('editor command failed: %s' % (command,))
+    finally:
         os.remove(tmpfile)
-    os.rmdir(TMPDIR)
+        os.rmdir(tmpdir)
+
+def get_output_file_list(input_file_list, args):
+    """Return output file list or raise error."""
+    if args.output:
+        try:
+            return read_input_file(args.output)
+        except IOError as exc:
+            raise Error('error reading output file: %s' % (exc.strerror,))
+    else:
+        return get_file_list_from_user(input_file_list, args)
+
+def get_input_file_list(args):
+    """Return input file list or raise error."""
+    if args.input:
+        try:
+            file_list = read_input_file(args.input)
+        except IOError as exc:
+            raise Error('error reading input file: %s' % (exc.strerror,))
+        sanitize_file_list(file_list)
+    elif args.files:
+        file_list = args.files
+        sanitize_file_list(file_list)
+    else:
+        if not args.recursive:
+            file_list = read_dir(os.curdir, args.all)
+        else:
+            file_list = read_dir_recursive(os.curdir, args.all)
+        key = textkey_path if not args.numeric_sort else numkey_path
+        file_list.sort(key=key)
+    if not file_list:
+        raise Error('no valid path given for renaming')
+    if not args.mangle_newlines:
+        for filename in file_list:
+            if '\n' in filename or '\r' in filename:
+                raise Error('file names with newlines are not supported, try -m!')
+    return file_list
+
+def get_file_lists(args):
+    """Return input and output file list or raise error."""
+    input_file_list = get_input_file_list(args)
+    output_file_list = get_output_file_list(input_file_list, args)
+    if len(input_file_list) != len(output_file_list):
+        raise Error('new file list has different length than old')
+    return input_file_list, output_file_list
+
+def mapping_needs_tmpdir(mapping):
+    """Check if mapping needs a temporary directory."""
+    for srcpath, dstpath in mapping.items():
+        if srcpath == os.path.dirname(dstpath) or dstpath.startswith(srcpath + os.sep):
+            return True
+    return False
+
+def dir_edit(args):
+    """Main functionality."""
+
+    global TMPDIR
+
+    try:
+        os.chdir(args.dir)
+    except OSError as exc:
+        raise Error('%s: %s' % (args.dir, exc.strerror))
+
+    input_file_list, output_file_list = get_file_lists(args)
+    mapping, inv_mapping, to_remove = generate_mapping(input_file_list, output_file_list)
+    if not mapping and not to_remove:
+        return
+    paths, cycles = decompose_mapping(mapping, inv_mapping)
+
+    fslog('cd %s', os.path.realpath(os.curdir))
+
+    need_tmpdir = cycles or mapping_needs_tmpdir(mapping)
+    if need_tmpdir:
+        TMPDIR = tempfile.mkdtemp(prefix='dir_edit-')
+        fslog('mkdir %s', TMPDIR)
+
+    for srcpath in to_remove:
+        path_remove(srcpath, args.remove_recursive)
+
+    rename_func = rev_redux_rename if args.safe else rev_redux_renames
+
+    for path in paths.values():
+        reduce(rename_func, reversed(path))
+
+    for cycle in cycles.values():
+        tmppath = os.path.join(TMPDIR, 'c_' + os.path.basename(cycle[0]))
+        path_rename(cycle[0], tmppath)
+        cycle[0] = tmppath
+        reduce(rename_func, reversed(cycle))
+
+    if need_tmpdir:
+        os.rmdir(TMPDIR)
+        fslog('rmdir %s', TMPDIR)
 
 def main_throws(args=None):
     """Main function, throws exception on error."""
