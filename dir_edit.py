@@ -17,7 +17,6 @@ import tempfile
 import locale
 import subprocess
 import argparse
-from functools import total_ordering
 from functools import reduce
 
 if sys.version_info < (3, 2):
@@ -56,50 +55,6 @@ def fslog(msg, *args, **_kwargs):
     print(msg)
 #
 ##############################################################################
-
-@total_ordering
-class Path(str):
-    """Represent a path.
-
-    This class can be used like a string path (os.path.*). As an extension,
-    comparisions (or lookups) are refering to the real pathname, e.g.:
-
-    Path('a/b/..//c') == Path('a/c')
-
-    Public members:
-    self.real -- the os.path.realname of the path
-    self.head -- the dirname of the path
-    self.tail -- the basename of the path
-    """
-    def __init__(self, string):
-        self.rebuild(string)
-    def rebuild(self, string):
-        """Reinitialize object from string."""
-        head, tail = os.path.split(string)
-        if not tail:
-            head, tail = os.path.split(head)
-        self.string = string
-        self.real = os.path.join(os.path.realpath(head), tail)
-        self.realcase = os.path.normcase(self.real)
-        self.head = head
-        self.tail = tail
-    def __eq__(self, other):
-        if isinstance(other, Path):
-            return self.real == other.real
-        elif isinstance(other, str):
-            return self == Path(other)
-        else:
-            return NotImplemented
-    def __lt__(self, other):
-        if isinstance(other, Path):
-            return self.real < other.real
-        elif isinstance(other, str):
-            return self < Path(other)
-        else:
-            raise TypeError('unorderable types')
-    def __hash__(self):
-        return self.real.__hash__()
-
 
 ##############################################################################
 # Wrapper functions for manipulation the file system
@@ -171,12 +126,13 @@ def path_least_common_ancestor(path1, path2):
     path_least_common_ancestor(Path('a/b/c'), Path('a/b/d')) == '/.../a/b'
     """
     # FIXME: Does not return when drive specifications differ!
-    real1, real2 = path1.real, path2.real
-    while real1 != real2:
-        if len(real1) > len(real2):
-            real1, real2 = real2, real1
-        real2 = os.path.dirname(real2)
-    return real1
+    abs1 = os.path.abspath(path1)
+    abs2 = os.path.abspath(path2)
+    while abs1 != abs2:
+        if len(abs1) > len(abs2):
+            abs1, abs2 = abs2, abs1
+        abs2 = os.path.dirname(abs2)
+    return abs1
 
 def path_renames(src, dst):
     """Rename src to dst, possibly creating needed or removing unneeded
@@ -187,19 +143,19 @@ def path_renames(src, dst):
     if os.path.lexists(dst):
         warn('path %s already exists, skip', dst)
         return
-    if os.path.commonprefix([src.real, os.path.dirname(dst.real)]) == src.real:
-        tmp_src = os.path.join(TMPDIR, 's_' + src.tail)
+    if dst.startswith(src + os.sep):
+        tmp_src = os.path.join(TMPDIR, 's_' + os.path.basename(src))
         path_rename(src, tmp_src)
-        dir_make_all(dst.head)
+        dir_make_all(os.path.dirname(dst))
         path_rename(tmp_src, dst)
         return
-    if dst.head and not os.path.lexists(dst.head):
-        dir_make_all(dst.head)
+    if os.path.dirname(dst) and not os.path.lexists(os.path.dirname(dst)):
+        dir_make_all(os.path.dirname(dst))
     path_rename(src, dst)
     # FIXME: Restructure!
-    if src.head and src.tail and not os.path.isabs(src):
+    if not os.path.isabs(src):
         lca = path_least_common_ancestor(src, dst)
-        head, tail = os.path.split(src.real)
+        head, tail = os.path.split(os.path.abspath(src))
         while head != lca:
             content = [tail] if SIMULATE else []
             if os.listdir(head) == content:
@@ -303,7 +259,8 @@ def decompose_mapping(graph, inv_graph):
         while dst in graph:
             dst = graph.pop(dst)
             path.append(dst)
-        if src.realcase == path[-1].realcase:
+        # Use normcase to allow case-renaming on Windows:
+        if os.path.normcase(src) == os.path.normcase(path[-1]):
             cycles[src] = path
         else:
             paths[src] = path
@@ -381,17 +338,17 @@ def dir_edit(args):
     inv_mapping = {}
     to_remove = []
     for srcfile, dstfile in zip(file_list, new_file_list):
-        srcpath = Path(srcfile)
-        dstpath = Path(dstfile)
+        srcpath = os.path.relpath(srcfile)
+        # empty lines indicate removal
+        if not dstfile:
+            to_remove.append(srcpath)
+            continue
+        dstpath = os.path.relpath(dstfile)
         if srcpath in mapping:
             raise Error('error, two identical entries have different destination:\n%s' %
                         ('\n'.join(['%s -> %s' % (x, y) for x, y in
                                     [(inv_mapping[mapping[srcpath]], mapping[srcpath]),
                                      (srcpath, dstpath)]]),))
-        # empty lines indicate removal
-        if not dstfile:
-            to_remove.append(srcpath)
-            continue
         if dstpath in inv_mapping:
             raise Error('error, two or more files have the same destination:\n%s' %
                         ('\n'.join(['%s -> %s' % (x, y) for x, y in
@@ -410,7 +367,7 @@ def dir_edit(args):
 
         need_tmpdir = False
         for srcpath, dstpath in mapping.items():
-            if srcpath.real == os.path.dirname(dstpath.real):
+            if srcpath == os.path.dirname(dstpath):
                 need_tmpdir = True
                 break
 
@@ -431,7 +388,7 @@ def dir_edit(args):
             reduce(rename_func, reversed(path))
 
         for cycle in cycles.values():
-            tmppath = Path(os.path.join(TMPDIR, 'c_' + cycle[0].tail))
+            tmppath = os.path.join(TMPDIR, 'c_' + os.path.basename(cycle[0]))
             path_rename(cycle[0], tmppath)
             cycle[0] = tmppath
             reduce(rename_func, reversed(cycle))

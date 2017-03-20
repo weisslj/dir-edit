@@ -504,7 +504,7 @@ class DirEditTestCase(unittest.TestCase):
         self.dir_edit(self.tmpdir, 'a', '-r', '-o', self.tmpfile('b/y'))
         self.restore_stdout()
         self.assertEqual([('a/x', 'a/x'), ('b/y', 'b/y')], self.list_tmpdir_content())
-        self.assertRegex(self.error, 'path b/y already exists, skip')
+        self.assertRegex(self.error, 'path b%sy already exists, skip' % (re.escape(os.sep),))
 
     def test_dest_exists_safe(self):
         """Check that existing destination error is handled in safe mode."""
@@ -532,12 +532,6 @@ class DirEditTestCase(unittest.TestCase):
         self.dir_edit(self.tmpdir, '-o', self.tmpfile('a/'))
         self.dir_edit(self.tmpdir, '-i', self.tmpfile('./a'), '-o', self.tmpfile('a'))
         self.assertEqual([('a', 'a')], self.list_tmpdir_content())
-        # for coverage:
-        self.assertFalse(dir_edit.Path('a') == [])
-        self.assertTrue(dir_edit.Path('a') == 'a')
-        self.assertTrue(dir_edit.Path('a') < dir_edit.Path('b'))
-        self.assertTrue(dir_edit.Path('a') < 'b')
-        self.assertRaises(TypeError, lambda: dir_edit.Path('a') < [])
 
     @unittest.skipIf(os.name == 'nt', 'symlinks not supported on Windows')
     def test_realpath_symlinks(self):
