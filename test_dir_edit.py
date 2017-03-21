@@ -652,10 +652,6 @@ class DirEditDryRunVerboseTestCase(DirEditTestCase):
         """Exclude test case for now."""
         # TODO: Fix bug!
         pass
-    def test_filenames(self):
-        """Exclude test case for now."""
-        # TODO: Fix bug!
-        pass
     @unittest.skipIf(os.name == 'nt', 'symlinks not supported on Windows')
     def test_realpath_symlinks(self):
         """Exclude test case for now."""

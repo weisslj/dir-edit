@@ -62,28 +62,28 @@ def fslog(msg, *args, **_kwargs):
 #
 def dir_make_all(path):
     """Wrapper function for os.makedirs()."""
-    fslog('mkdir -p %s', path)
+    fslog('mkdir -p -- %s', path)
     if SIMULATE:
         return
     os.makedirs(path)
 
 def file_remove(path):
     """Wrapper function for os.remove()."""
-    fslog('unlink %s', path)
+    fslog('unlink -- %s', path)
     if SIMULATE:
         return
     os.remove(path)
 
 def dir_remove(path):
     """Wrapper function for os.rmdir()."""
-    fslog('rmdir %s', path)
+    fslog('rmdir -- %s', path)
     if SIMULATE:
         return
     os.rmdir(path)
 
 def remove_recursive(path):
     """Recursive path removal."""
-    fslog('rm -r %s', path)
+    fslog('rm -r -- %s', path)
     if SIMULATE:
         return
     if not os.path.islink(path) and os.path.isdir(path):
@@ -111,7 +111,7 @@ def path_rename(src, dst):
     if os.path.lexists(dst):
         warn('path %s already exists, skip', dst)
         return
-    fslog('mv %s %s', src, dst)
+    fslog('mv -- %s %s', src, dst)
     if SIMULATE:
         return
     os.rename(src, dst)
@@ -382,12 +382,12 @@ def dir_edit(args):
         return
     paths, cycles = decompose_mapping(mapping, inv_mapping)
 
-    fslog('cd %s', os.path.realpath(os.curdir))
+    fslog('cd -- %s', os.path.realpath(os.curdir))
 
     need_tmpdir = cycles or mapping_needs_tmpdir(mapping)
     if need_tmpdir:
         TMPDIR = tempfile.mkdtemp(prefix='dir_edit-')
-        fslog('mkdir %s', TMPDIR)
+        fslog('mkdir -- %s', TMPDIR)
 
     for srcpath in to_remove:
         path_remove(srcpath, args.remove_recursive)
@@ -405,7 +405,7 @@ def dir_edit(args):
 
     if need_tmpdir:
         os.rmdir(TMPDIR)
-        fslog('rmdir %s', TMPDIR)
+        fslog('rmdir -- %s', TMPDIR)
 
 def main_throws(args=None):
     """Main function, throws exception on error."""
