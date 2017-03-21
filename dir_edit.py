@@ -83,11 +83,11 @@ def dir_remove(path):
 
 def remove_recursive(path):
     """Recursive path removal."""
-    fslog('rm -rf %s', path)
+    fslog('rm -r %s', path)
     if SIMULATE:
         return
     if not os.path.islink(path) and os.path.isdir(path):
-        shutil.rmtree(path, ignore_errors=True)
+        shutil.rmtree(path)
     else:
         os.remove(path)
 
