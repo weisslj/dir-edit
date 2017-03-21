@@ -62,6 +62,7 @@ def dir_edit_external(*args):
 
 class DirEditTestCase(unittest.TestCase):
     # pylint: disable=too-many-instance-attributes,too-many-public-methods
+    # pylint: disable=deprecated-method
     """Main dir_edit.py test class."""
 
     @classmethod
