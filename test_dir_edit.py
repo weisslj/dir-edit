@@ -573,8 +573,7 @@ class DirEditDryRunVerboseTestCase(DirEditTestCase):
             dir_edit.main_throws(['--dry-run', '--verbose'] + args)
         finally:
             self.restore_stdout()
-        for command in self.output.split('\n'):
-            subprocess.check_output(command, shell=True, universal_newlines=True)
+        subprocess.check_output(self.output, shell=True, universal_newlines=True)
     def test_dry_run(self):
         """Not necessary here."""
         pass
@@ -627,10 +626,6 @@ class DirEditDryRunVerboseTestCase(DirEditTestCase):
         # TODO: Fix bug!
         pass
     def test_filenames(self):
-        """Exclude test case for now."""
-        # TODO: Fix bug!
-        pass
-    def test_newlines(self):
         """Exclude test case for now."""
         # TODO: Fix bug!
         pass
