@@ -71,20 +71,6 @@ def rename_ops(src, dst):
     """Return operations for renaming src path to dst."""
     return [((rename, 'mv -n'), (src, dst))]
 
-def path_least_common_ancestor(path1, path2):
-    """Return least common ancestor of Path objects path1 and path2.
-    e.g.
-    path_least_common_ancestor(Path('a/b/c'), Path('a/b/d')) == '/.../a/b'
-    """
-    # FIXME: Does not return when drive specifications differ!
-    abs1 = os.path.abspath(path1)
-    abs2 = os.path.abspath(path2)
-    while abs1 != abs2:
-        if len(abs1) > len(abs2):
-            abs1, abs2 = abs2, abs1
-        abs2 = os.path.dirname(abs2)
-    return abs1
-
 def renames_ops(src, dst, tmpdir):
     """Return operations for renaming src to dst, possibly creating needed or
     removing unneeded directories. Also handles the case when moving a file to
@@ -92,23 +78,19 @@ def renames_ops(src, dst, tmpdir):
     mv x x/new_x
     """
     ops = []
+    dst_dir = os.path.dirname(dst)
     if dst.startswith(src + os.sep):
         tmp_src = os.path.join(tmpdir, 's_' + os.path.basename(src))
         ops += rename_ops(src, tmp_src)
-        ops += [((os.makedirs, 'mkdir -p'), (os.path.dirname(dst),))]
+        ops += [((os.makedirs, 'mkdir -p'), (dst_dir,))]
         ops += rename_ops(tmp_src, dst)
         return ops
-    if os.path.dirname(dst) and not os.path.lexists(os.path.dirname(dst)):
-        ops += [((os.makedirs, 'mkdir -p'), (os.path.dirname(dst),))]
+    if dst_dir and not os.path.lexists(dst_dir):
+        ops += [((os.makedirs, 'mkdir -p'), (dst_dir,))]
     ops += rename_ops(src, dst)
-    # FIXME: Restructure!
-    lca = path_least_common_ancestor(src, dst)
-    head, tail = os.path.split(os.path.abspath(src))
-    while head != lca:
-        if os.path.isdir(head) and os.listdir(head) == [tail]:
-            ops += [((os.rmdir, 'rmdir'), (head,))]
-        else:
-            break
+    head, tail = os.path.split(src)
+    while head and not dst.startswith(head + os.sep) and os.listdir(head) == [tail]:
+        ops += [((os.rmdir, 'rmdir'), (head,))]
         head, tail = os.path.split(head)
     return ops
 
