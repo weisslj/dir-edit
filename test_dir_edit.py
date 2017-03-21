@@ -246,7 +246,7 @@ class DirEditTestCase(unittest.TestCase):
         self.assertEqual(['a1', 'c2'], self.list_tmpdir())
         with self.assertRaisesRegex(dir_edit.Error, 'identical entries'):
             self.dir_edit(self.tmpdir, '-i', self.tmpfile('c2', 'c2'),
-                          '-o', self.tmpfile('d2', 'd2'))
+                          '-o', self.tmpfile('d2', 'e2'))
         with self.assertRaisesRegex(dir_edit.Error, 'error reading input file'):
             self.dir_edit(self.tmpdir, '-i', os.path.join(self.tmpdir2, 'nonexist'))
         self.assertEqual(['a1', 'c2'], self.list_tmpdir())
