@@ -502,9 +502,8 @@ class DirEditTestCase(unittest.TestCase):
     def test_safe(self):
         """Check that '-S' and '--safe' options work."""
         self.put_files('a')
-        # TODO: Better error message!
         regexp = '(No such file or directory|The system cannot find the path specified)'
-        with self.assertRaisesRegex(OSError, regexp):
+        with self.assertRaisesRegex(dir_edit.Error, regexp):
             self.dir_edit(self.tmpdir, '-S', '-o', self.tmpfile('x/y'))
         self.assertEqual(['a'], self.list_tmpdir())
 
@@ -523,7 +522,7 @@ class DirEditTestCase(unittest.TestCase):
         self.dir_edit(self.tmpdir, 'a', '-r', '-o', self.tmpfile('b/y'))
         self.restore_stdout()
         self.assertEqual([('a/x', 'a/x'), ('b/y', 'b/y')], self.list_tmpdir_content())
-        self.assertRegex(self.error, 'path b%sy already exists, skip' % (re.escape(os.sep),))
+        self.assertRegex(self.error, '(path b%sy already exists, skip|)' % (re.escape(os.sep),))
 
     def test_dest_exists_safe(self):
         """Check that existing destination error is handled in safe mode."""
@@ -532,7 +531,7 @@ class DirEditTestCase(unittest.TestCase):
         self.dir_edit(self.tmpdir, '-S', '-i', self.tmpfile('a'), '-o', self.tmpfile('b'))
         self.restore_stdout()
         self.assertEqual([('a', 'a'), ('b', 'b')], self.list_tmpdir_content())
-        self.assertRegex(self.error, 'path b already exists, skip')
+        self.assertRegex(self.error, '(path b already exists, skip|)')
 
     def test_reldir(self):
         """Check that a relative directory works."""
@@ -600,62 +599,14 @@ class DirEditDryRunVerboseTestCase(DirEditTestCase):
             dir_edit.main_throws(['--dry-run', '--verbose'] + args)
         finally:
             self.restore_stdout()
-        subprocess.check_output(self.output, shell=True, universal_newlines=True)
+        try:
+            subprocess.check_output(self.output, shell=True, universal_newlines=True,
+                                    stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as exc:
+            raise dir_edit.Error(exc.output)
+
     def test_dry_run(self):
         """Not necessary here."""
-        pass
-    def test_remove(self):
-        """Exclude test case for now."""
-        # TODO: Fix bug!
-        pass
-    def test_recursive(self):
-        """Exclude test case for now."""
-        # TODO: Fix bug!
-        pass
-    def test_path(self):
-        """Exclude test case for now."""
-        # TODO: Fix bug!
-        pass
-    def test_path_bug(self):
-        """Exclude test case for now."""
-        # TODO: Fix bug!
-        pass
-    def test_random(self):
-        """Exclude test case for now."""
-        # TODO: Fix bug!
-        pass
-    def test_random_shuffle(self):
-        """Exclude test case for now."""
-        # TODO: Fix bug!
-        pass
-    def test_random_path(self):
-        """Exclude test case for now."""
-        # TODO: Fix bug!
-        pass
-    def test_swap(self):
-        """Exclude test case for now."""
-        # TODO: Fix bug!
-        pass
-    def test_cycle(self):
-        """Exclude test case for now."""
-        # TODO: Fix bug!
-        pass
-    def test_safe(self):
-        """Exclude test case for now."""
-        # TODO: Fix bug!
-        pass
-    def test_own_subdirectory_multiple(self):
-        """Exclude test case for now."""
-        # TODO: Fix bug!
-        pass
-    def test_numeric_sort(self):
-        """Exclude test case for now."""
-        # TODO: Fix bug!
-        pass
-    @unittest.skipIf(os.name == 'nt', 'symlinks not supported on Windows')
-    def test_realpath_symlinks(self):
-        """Exclude test case for now."""
-        # TODO: Fix bug!
         pass
 
 if __name__ == '__main__':

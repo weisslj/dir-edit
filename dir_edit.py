@@ -18,22 +18,21 @@ import locale
 import subprocess
 import argparse
 import shutil
-from functools import reduce
+import itertools
 
 if sys.version_info < (3, 2):
     os.fsencode = lambda filename: filename
-
-SIMULATE = False
-VERBOSE = False
-TMPDIR = None
 
 class Error(Exception):
     """Aborts program, used in test suite."""
     pass
 
-##############################################################################
-# Logging functions
-#
+def pairwise(iterable):
+    """s -> (s0, s1), (s1, s2), (s2, s3), ..."""
+    it1, it2 = itertools.tee(iterable)
+    next(it2, None)
+    return zip(it1, it2)
+
 def warn(msg, *args, **_kwargs):
     """Output a warning message to stderr."""
     prog_name = os.path.basename(sys.argv[0])
@@ -46,75 +45,30 @@ def shellquote(string):
     """Return a quoted version of string suitable for a sh-like shell."""
     return "'" + string.replace("'", "'\\''") + "'"
 
-def fslog(msg, *args, **_kwargs):
-    """Output a shell command to stdout, quoting it's arguments."""
-    if not VERBOSE:
-        return
-    msg = msg % tuple(shellquote(x) for x in args)
-    if sys.version_info < (3, 0):
-        msg = msg.decode(errors='replace')
-    print(msg)
-#
-##############################################################################
-
-##############################################################################
-# Wrapper functions for manipulation the file system
-#
-def dir_make_all(path):
-    """Wrapper function for os.makedirs()."""
-    fslog('mkdir -p -- %s', path)
-    if SIMULATE:
-        return
-    os.makedirs(path)
-
-def file_remove(path):
-    """Wrapper function for os.remove()."""
-    fslog('unlink -- %s', path)
-    if SIMULATE:
-        return
-    os.remove(path)
-
-def dir_remove(path):
-    """Wrapper function for os.rmdir()."""
-    fslog('rmdir -- %s', path)
-    if SIMULATE:
-        return
-    os.rmdir(path)
-
-def remove_recursive(path):
-    """Recursive path removal."""
-    fslog('rm -r -- %s', path)
-    if SIMULATE:
-        return
-    if not os.path.islink(path) and os.path.isdir(path):
-        shutil.rmtree(path)
-    else:
-        os.remove(path)
-
-def path_remove(path, recursive=False):
-    """Path removal, optionally recursive."""
-    if not os.path.islink(path) and os.path.isdir(path):
-        subpaths = os.listdir(path)
+def remove_ops(path, recursive=False):
+    """Return operations for removing path, optionally recursive."""
+    if os.path.islink(path) or not os.path.isdir(path):
+        return [((os.remove, 'unlink'), (path,))]
+    if os.listdir(path):
         if recursive:
-            for subpath in subpaths:
-                remove_recursive(os.path.join(path, subpath))
-            subpaths = []
-        if subpaths:
-            warn('not removing directory %s: not empty (try -R)', path)
+            return [((shutil.rmtree, 'rm -r'), (path,))]
         else:
-            dir_remove(path)
+            warn('not removing directory %s: not empty (try -R)', path)
+            return []
     else:
-        file_remove(path)
+        return [((os.rmdir, 'rmdir'), (path,))]
 
-def path_rename(src, dst):
-    """Rename src path to dst."""
+def rename(src, dst):
+    """Rename src path to dst, do not overwrite existing file."""
+    # This is of course not race-condition free:
     if os.path.lexists(dst):
         warn('path %s already exists, skip', dst)
         return
-    fslog('mv -- %s %s', src, dst)
-    if SIMULATE:
-        return
     os.rename(src, dst)
+
+def rename_ops(src, dst):
+    """Return operations for renaming src path to dst."""
+    return [((rename, 'mv -n'), (src, dst))]
 
 def path_least_common_ancestor(path1, path2):
     """Return least common ancestor of Path objects path1 and path2.
@@ -130,48 +84,32 @@ def path_least_common_ancestor(path1, path2):
         abs2 = os.path.dirname(abs2)
     return abs1
 
-def path_renames(src, dst):
-    """Rename src to dst, possibly creating needed or removing unneeded
-    directories. Also handles the case when moving a file to a subdirectory
-    with the same name, e.g.:
+def renames_ops(src, dst, tmpdir):
+    """Return operations for renaming src to dst, possibly creating needed or
+    removing unneeded directories. Also handles the case when moving a file to
+    a subdirectory with the same name, e.g.:
     mv x x/new_x
     """
-    if os.path.lexists(dst):
-        warn('path %s already exists, skip', dst)
-        return
+    ops = []
     if dst.startswith(src + os.sep):
-        tmp_src = os.path.join(TMPDIR, 's_' + os.path.basename(src))
-        path_rename(src, tmp_src)
-        dir_make_all(os.path.dirname(dst))
-        path_rename(tmp_src, dst)
-        return
+        tmp_src = os.path.join(tmpdir, 's_' + os.path.basename(src))
+        ops += rename_ops(src, tmp_src)
+        ops += [((os.makedirs, 'mkdir -p'), (os.path.dirname(dst),))]
+        ops += rename_ops(tmp_src, dst)
+        return ops
     if os.path.dirname(dst) and not os.path.lexists(os.path.dirname(dst)):
-        dir_make_all(os.path.dirname(dst))
-    path_rename(src, dst)
+        ops += [((os.makedirs, 'mkdir -p'), (os.path.dirname(dst),))]
+    ops += rename_ops(src, dst)
     # FIXME: Restructure!
-    if not os.path.isabs(src):
-        lca = path_least_common_ancestor(src, dst)
-        head, tail = os.path.split(os.path.abspath(src))
-        while head != lca:
-            content = [tail] if SIMULATE else []
-            if os.listdir(head) == content:
-                dir_remove(head)
-            else:
-                break
-            head, tail = os.path.split(head)
-#
-##############################################################################
-
-
-# Wrapper functions for reversely renaming a list of files using reduce()
-def rev_redux_rename(dst, src):
-    """Rename src path to dst, without creating intermediate directories."""
-    path_rename(src, dst)
-    return src
-def rev_redux_renames(dst, src):
-    """Rename src path to dst, creating intermediate directories if needed."""
-    path_renames(src, dst)
-    return src
+    lca = path_least_common_ancestor(src, dst)
+    head, tail = os.path.split(os.path.abspath(src))
+    while head != lca:
+        if os.path.isdir(head) and os.listdir(head) == [tail]:
+            ops += [((os.rmdir, 'rmdir'), (head,))]
+        else:
+            break
+        head, tail = os.path.split(head)
+    return ops
 
 NUMKEY_REGEX = re.compile(r'(\s*[+-]?[0-9]+\.?[0-9]*\s*)(.*)')
 def numkey(string):
@@ -366,52 +304,63 @@ def mapping_needs_tmpdir(mapping):
             return True
     return False
 
+def generate_operations(paths, cycles, to_remove, need_tmpdir, args):
+    """Generate file system operations."""
+    ops = []
+    ops += [((None, 'cd'), (os.path.realpath(os.curdir),))]
+    tmpdir = 'dir_edit_tmp'
+    if need_tmpdir:
+        ops += [((os.mkdir, 'mkdir'), (tmpdir,))]
+    for srcpath in to_remove:
+        ops += remove_ops(srcpath, args.remove_recursive)
+    for path in paths.values():
+        for dst, src in pairwise(reversed(path)):
+            if args.safe:
+                ops += rename_ops(src, dst)
+            else:
+                ops += renames_ops(src, dst, tmpdir)
+    for cycle in cycles.values():
+        tmppath = os.path.join(tmpdir, 'c_' + os.path.basename(cycle[0]))
+        ops += rename_ops(cycle[0], tmppath)
+        cycle[0] = tmppath
+        for dst, src in pairwise(reversed(cycle)):
+            ops += rename_ops(src, dst)
+    if need_tmpdir:
+        ops += [((os.rmdir, 'rmdir'), (tmpdir,))]
+    return ops
+
+def execute_operations(ops, args):
+    """Execute file system operations."""
+    for (fun, cmd), fargs in ops:
+        if args.verbose:
+            msg = cmd + ' -- ' + ' '.join(shellquote(farg) for farg in fargs)
+            if sys.version_info < (3, 0):
+                msg = msg.decode(errors='replace')
+            print(msg)
+        if not args.dry_run and fun is not None:
+            try:
+                fun(*fargs)
+            except OSError as exc:
+                fun_call = fun.__name__ + '(' + ', '.join((repr(farg) for farg in fargs)) + ')'
+                raise Error(fun_call + ': ' + exc.strerror)
+
 def dir_edit(args):
     """Main functionality."""
-
-    global TMPDIR
-
     try:
         os.chdir(args.dir)
     except OSError as exc:
         raise Error('%s: %s' % (args.dir, exc.strerror))
-
     input_file_list, output_file_list = get_file_lists(args)
     mapping, inv_mapping, to_remove = generate_mapping(input_file_list, output_file_list)
     if not mapping and not to_remove:
         return
     paths, cycles = decompose_mapping(mapping, inv_mapping)
-
-    fslog('cd -- %s', os.path.realpath(os.curdir))
-
     need_tmpdir = cycles or mapping_needs_tmpdir(mapping)
-    if need_tmpdir:
-        TMPDIR = tempfile.mkdtemp(prefix='dir_edit-')
-        fslog('mkdir -- %s', TMPDIR)
-
-    for srcpath in to_remove:
-        path_remove(srcpath, args.remove_recursive)
-
-    rename_func = rev_redux_rename if args.safe else rev_redux_renames
-
-    for path in paths.values():
-        reduce(rename_func, reversed(path))
-
-    for cycle in cycles.values():
-        tmppath = os.path.join(TMPDIR, 'c_' + os.path.basename(cycle[0]))
-        path_rename(cycle[0], tmppath)
-        cycle[0] = tmppath
-        reduce(rename_func, reversed(cycle))
-
-    if need_tmpdir:
-        os.rmdir(TMPDIR)
-        fslog('rmdir -- %s', TMPDIR)
+    ops = generate_operations(paths, cycles, to_remove, need_tmpdir, args)
+    execute_operations(ops, args)
 
 def main_throws(args=None):
     """Main function, throws exception on error."""
-
-    global SIMULATE
-    global VERBOSE
 
     locale.setlocale(locale.LC_ALL, '')
 
@@ -461,9 +410,6 @@ the changes.'''
                         help='output filesystem modifications to stdout')
 
     args = parser.parse_args(args)
-
-    VERBOSE = args.verbose
-    SIMULATE = args.dry_run
 
     dir_edit(args)
 
