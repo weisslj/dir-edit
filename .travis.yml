@@ -12,3 +12,4 @@ script:
   - coverage run test_dir_edit.py
   - coverage report --fail-under=100
   - python setup.py -q install
+  - pylint *.py
