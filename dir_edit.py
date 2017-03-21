@@ -86,11 +86,18 @@ def remove_recursive(top):
     if SIMULATE:
         return
     for root, dirs, files in os.walk(top, topdown=False):
+        real_dirs = []
+        for name in dirs:
+            if os.path.islink(os.path.join(root, name)):
+                files.append(name)
+            else:
+                real_dirs.append(name)
+        dirs[:] = real_dirs
         for name in files:
             os.remove(os.path.join(root, name))
         for name in dirs:
             os.rmdir(os.path.join(root, name))
-    if os.path.isdir(top):
+    if not os.path.islink(top) and os.path.isdir(top):
         os.rmdir(top)
     else:
         os.remove(top)

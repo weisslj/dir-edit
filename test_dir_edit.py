@@ -473,6 +473,20 @@ class DirEditTestCase(unittest.TestCase):
         self.dir_edit(self.tmpdir, '--remove-recursive', '-o', self.tmpfile(''))
         self.assertEqual([], self.list_tmpdir())
 
+    @unittest.skipIf(os.name == 'nt', 'symlinks not supported on Windows')
+    def test_recursive_remove_symlinks(self):
+        """Test that recursive remove can handle symlinks."""
+        self.put_files('a')
+        self.put_dirs('b', 't/t/t')
+        os.symlink('../../../a', os.path.join(self.tmpdir, 't/t/t/x'))
+        os.symlink('../../../b', os.path.join(self.tmpdir, 't/t/t/y'))
+        os.symlink('../../../c', os.path.join(self.tmpdir, 't/t/t/z'))
+        os.symlink('../a', os.path.join(self.tmpdir, 't/x'))
+        os.symlink('../b', os.path.join(self.tmpdir, 't/y'))
+        os.symlink('../c', os.path.join(self.tmpdir, 't/z'))
+        self.dir_edit(self.tmpdir, '-R', '-i', self.tmpfile('t'), '-o', self.tmpfile(''))
+        self.assertEqual(['a', 'b/'], self.list_tmpdir())
+
     def test_own_subdirectory(self):
         """Move a file to a subdirectory with the same name."""
         self.put_files('x')
