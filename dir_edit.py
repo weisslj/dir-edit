@@ -232,10 +232,10 @@ def get_file_list_from_user(file_list, args):
     """Return user-edited file_list or raise error."""
     tmpdir = tempfile.mkdtemp(prefix='dir_edit-')
     tmpfile = os.path.join(tmpdir, 'file_list.txt')
-    nl_r = re.compile(r'[\n\r]+')
-    nl = os.linesep.encode()
+    nl_re = re.compile(r'[\n\r]+')
+    nl_buf = os.linesep.encode()
     with open(tmpfile, 'wb') as stream:
-        stream.write(b''.join([os.fsencode(nl_r.sub(' ', e)) + nl for e in file_list]))
+        stream.write(b''.join([os.fsencode(nl_re.sub(' ', e)) + nl_buf for e in file_list]))
     if os.name == 'nt':
         # Windows opens default editor if text file is opened directly:
         command = [tmpfile]
