@@ -353,10 +353,11 @@ class DirEditTestCase(unittest.TestCase):
         self.assertEqual(result_content, self.list_tmpdir_content())
 
     def test_remove(self):
-        """Test file removal through empty lines."""
-        self.put_files('a', 'b')
-        self.dir_edit(self.tmpdir, '-o', self.tmpfile('', 'a'))
-        self.assertEqual([('a', 'b')], self.list_tmpdir_content())
+        """Test file and directory removal through empty lines."""
+        self.put_files('a')
+        self.put_dirs('b')
+        self.dir_edit(self.tmpdir, '-o', self.tmpfile('', ''))
+        self.assertEqual([], self.list_tmpdir())
 
     def test_all(self):
         """Check that '-a' and '--all' options work."""
