@@ -18,10 +18,14 @@ import locale
 import subprocess
 import argparse
 import shutil
+import shlex
+import pipes
 import itertools
 
 if sys.version_info < (3, 2):
     os.fsencode = lambda filename: filename
+if sys.version_info < (3, 3):
+    shlex.quote = pipes.quote
 
 class Error(Exception):
     """Aborts program, used in test suite."""
@@ -40,10 +44,6 @@ def warn(msg, *args, **kwargs):
     if sys.version_info < (3, 0):
         msg = msg.decode(errors='replace')  # pylint: disable=redefined-variable-type
     print(msg, file=sys.stderr)
-
-def shellquote(string):
-    """Return a quoted version of string suitable for a sh-like shell."""
-    return "'" + string.replace("'", "'\\''") + "'"
 
 def remove_ops(path, recursive=False):
     """Return operations for removing path, optionally recursive."""
@@ -238,7 +238,7 @@ def get_file_list_from_user(file_list, args):
         if args.editor:
             command = args.editor + ' ' + subprocess.list2cmdline(command)
     else:
-        command = args.editor + ' ' + shellquote(tmpfile)
+        command = args.editor + ' ' + shlex.quote(tmpfile)
     try:
         subprocess.check_call(command, shell=True)
         with open(tmpfile, 'r') as stream:
@@ -329,7 +329,7 @@ def execute_operations(ops, args):
     """Execute file system operations."""
     for (fun, cmd), fargs in ops:
         if args.verbose:
-            msg = cmd + ' -- ' + ' '.join(shellquote(farg) for farg in fargs)
+            msg = cmd + ' -- ' + ' '.join(shlex.quote(farg) for farg in fargs)
             if sys.version_info < (3, 0):
                 msg = msg.decode(errors='replace')
             print(msg)
