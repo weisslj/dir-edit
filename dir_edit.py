@@ -20,6 +20,7 @@ import argparse
 import shutil
 import shlex
 import pipes
+import random
 import itertools
 
 if sys.version_info < (3, 2):
@@ -302,11 +303,16 @@ def mapping_needs_tmpdir(mapping):
             return True
     return False
 
+def tmpname():
+    """Return temporary file name."""
+    characters = 'abcdefghijklmnopqrstuvwxyz0123456789_'
+    return 'tmp_' + ''.join(random.choice(characters) for _ in range(20))
+
 def generate_operations(paths, cycles, to_remove, need_tmpdir, args):
     """Generate file system operations."""
     ops = []
     ops += [((None, 'cd'), (os.path.realpath(os.curdir),))]
-    tmpdir = 'dir_edit_tmp'
+    tmpdir = tmpname()
     if need_tmpdir:
         ops += [((os.mkdir, 'mkdir'), (tmpdir,))]
     for srcpath in to_remove:
