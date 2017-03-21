@@ -17,6 +17,7 @@ import tempfile
 import locale
 import subprocess
 import argparse
+import shutil
 from functools import reduce
 
 if sys.version_info < (3, 2):
@@ -80,27 +81,15 @@ def dir_remove(path):
         return
     os.rmdir(path)
 
-def remove_recursive(top):
+def remove_recursive(path):
     """Recursive path removal."""
-    fslog('rm -rf %s', top)
+    fslog('rm -rf %s', path)
     if SIMULATE:
         return
-    for root, dirs, files in os.walk(top, topdown=False):
-        real_dirs = []
-        for name in dirs:
-            if os.path.islink(os.path.join(root, name)):
-                files.append(name)
-            else:
-                real_dirs.append(name)
-        dirs[:] = real_dirs
-        for name in files:
-            os.remove(os.path.join(root, name))
-        for name in dirs:
-            os.rmdir(os.path.join(root, name))
-    if not os.path.islink(top) and os.path.isdir(top):
-        os.rmdir(top)
+    if not os.path.islink(path) and os.path.isdir(path):
+        shutil.rmtree(path, ignore_errors=True)
     else:
-        os.remove(top)
+        os.remove(path)
 
 def path_remove(path, recursive=False):
     """Path removal, optionally recursive."""
