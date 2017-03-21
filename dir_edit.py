@@ -97,7 +97,7 @@ def remove_recursive(top):
 
 def path_remove(path, recursive=False):
     """Path removal, optionally recursive."""
-    if os.path.isdir(path):
+    if not os.path.islink(path) and os.path.isdir(path):
         subpaths = os.listdir(path)
         if recursive:
             for subpath in subpaths:

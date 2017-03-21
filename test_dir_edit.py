@@ -359,6 +359,19 @@ class DirEditTestCase(unittest.TestCase):
         self.dir_edit(self.tmpdir, '-o', self.tmpfile('', ''))
         self.assertEqual([], self.list_tmpdir())
 
+    @unittest.skipIf(os.name == 'nt', 'symlinks not supported on Windows')
+    def test_remove_symlinks(self):
+        """Test symlink removal through empty lines."""
+        self.put_files('a')
+        self.put_dirs('b')
+        os.symlink('a', os.path.join(self.tmpdir, 'x'))
+        os.symlink('b', os.path.join(self.tmpdir, 'y'))
+        os.symlink('c', os.path.join(self.tmpdir, 'z'))
+        self.dir_edit(self.tmpdir,
+                      '-i', self.tmpfile('x', 'y', 'z'),
+                      '-o', self.tmpfile('', '', ''))
+        self.assertEqual(['a', 'b/'], self.list_tmpdir())
+
     def test_all(self):
         """Check that '-a' and '--all' options work."""
         self.put_files('.a', 'b')
