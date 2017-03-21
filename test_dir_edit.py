@@ -592,7 +592,7 @@ class DirEditTestCase(unittest.TestCase):
     def test_multibyte_error(self):
         """Check that multibyte error message works."""
         regexp = '(No such file or directory|The system cannot find the file specified)'
-        with self.assertRaisesRegexp(dir_edit.Error, regexp):
+        with self.assertRaisesRegex(dir_edit.Error, regexp):
             self.dir_edit(os.path.join(self.tmpdir, '\xc3\xa4'))
         with self.assertRaisesRegex(dir_edit.Error, regexp):
             self.dir_edit(os.path.join(self.tmpdir, '\xe4'))
