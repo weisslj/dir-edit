@@ -139,22 +139,25 @@ def check_file_list(file_list):
     except OSError as exc:
         raise Error('{}: {}'.format(path, exc.strerror))
 
-def read_input_file(filename):
+def read_file_list(filename):
     """Read a file containing a single path per line, return list of paths.
     Can throw exception IOError.
     """
     with open(filename, 'r') as stream:
-        file_list = [line.rstrip('\r\n') for line in stream]
-    return file_list
+        return [line.rstrip('\r\n') for line in stream]
+
+def remove_hidden(names, all_entries=False):
+    """Remove entries starting with a dot (.) from list of basenames."""
+    if not all_entries:
+        names[:] = [name for name in names if not name.startswith('.')]
 
 def read_dir(path, all_entries=False):
     """Return a list of paths in directory at path. If all_entries is not
     true, exclude all entries starting with a dot (.).
     """
-    filenames = os.listdir(path)
-    if not all_entries:
-        return [filename for filename in filenames if not filename.startswith('.')]
-    return filenames
+    names = os.listdir(path)
+    remove_hidden(names, all_entries)
+    return names
 
 def read_dir_recursive(path, all_entries=False):
     """Return a list of paths in directory at path (recursively). If
@@ -163,13 +166,12 @@ def read_dir_recursive(path, all_entries=False):
     paths = []
     for root, dirs, files in os.walk(path):
         not_dirs = files + [name for name in dirs if os.path.islink(os.path.join(root, name))]
+        remove_hidden(not_dirs, all_entries)
         for name in not_dirs:
-            if all_entries or not name.startswith('.'):
-                paths.append(os.path.normpath(os.path.join(root, name)))
+            paths.append(os.path.normpath(os.path.join(root, name)))
         if root != path and not dirs and not files:
             paths.append(os.path.normpath(root))
-        if not all_entries:
-            dirs[:] = [name for name in dirs if not name.startswith('.')]
+        remove_hidden(dirs, all_entries)
     return paths
 
 def decompose_mapping(graph, inv_graph):
@@ -253,7 +255,7 @@ def get_output_file_list(input_file_list, args):
     """Return output file list or raise error."""
     if args.output:
         try:
-            return read_input_file(args.output)
+            return read_file_list(args.output)
         except IOError as exc:
             raise Error('error reading output file: {}'.format(exc.strerror))
     else:
@@ -263,7 +265,7 @@ def get_input_file_list(args):
     """Return input file list or raise error."""
     if args.input:
         try:
-            file_list = read_input_file(args.input)
+            file_list = read_file_list(args.input)
         except IOError as exc:
             raise Error('error reading input file: {}'.format(exc.strerror))
         check_file_list(file_list)
