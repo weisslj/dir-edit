@@ -33,12 +33,12 @@ def pairwise(iterable):
     next(it2, None)
     return zip(it1, it2)
 
-def warn(msg, *args, **_kwargs):
+def warn(msg, *args, **kwargs):
     """Output a warning message to stderr."""
     prog_name = os.path.basename(sys.argv[0])
-    msg = '%s: %s' % (prog_name, msg % args)
+    msg = '{}: {}'.format(prog_name, msg.format(*args, **kwargs))
     if sys.version_info < (3, 0):
-        msg = msg.decode(errors='replace')
+        msg = msg.decode(errors='replace')  # pylint: disable=redefined-variable-type
     print(msg, file=sys.stderr)
 
 def shellquote(string):
@@ -53,7 +53,7 @@ def remove_ops(path, recursive=False):
         if recursive:
             return [((shutil.rmtree, 'rm -r'), (path,))]
         else:
-            warn('not removing directory %s: not empty (try -R)', path)
+            warn('not removing directory {}: not empty (try -R)', path)
             return []
     else:
         return [((os.rmdir, 'rmdir'), (path,))]
@@ -62,7 +62,7 @@ def rename(src, dst):
     """Rename src path to dst, do not overwrite existing file."""
     # This is of course not race-condition free:
     if os.path.lexists(dst):
-        warn('path %s already exists, skip', dst)
+        warn('path {} already exists, skip', dst)
         return
     os.rename(src, dst)
 
@@ -212,15 +212,13 @@ def generate_mapping(input_file_list, output_file_list):
             continue
         dstpath = os.path.relpath(dstfile)
         if srcpath in mapping:
-            raise Error('error, two identical entries have different destination:\n%s' %
-                        ('\n'.join(['%s -> %s' % (x, y) for x, y in
-                                    [(inv_mapping[mapping[srcpath]], mapping[srcpath]),
-                                     (srcpath, dstpath)]]),))
+            conflicts = [(inv_mapping[mapping[srcpath]], mapping[srcpath]), (srcpath, dstpath)]
+            raise Error('error, two identical entries have different destination:\n' +
+                        '\n'.join('{} -> {}'.format(x, y) for x, y in conflicts))
         if dstpath in inv_mapping:
-            raise Error('error, two or more files have the same destination:\n%s' %
-                        ('\n'.join(['%s -> %s' % (x, y) for x, y in
-                                    [(inv_mapping[dstpath], mapping[inv_mapping[dstpath]]),
-                                     (srcpath, dstpath)]]),))
+            conflicts = [(inv_mapping[dstpath], mapping[inv_mapping[dstpath]]), (srcpath, dstpath)]
+            raise Error('error, two or more files have the same destination:\n' +
+                        '\n'.join('{} -> {}'.format(x, y) for x, y in conflicts))
         # no self loops (need no renaming!)
         if srcpath == dstpath:
             continue
@@ -248,7 +246,7 @@ def get_file_list_from_user(file_list, args):
         with open(tmpfile, 'r') as stream:
             return [line.rstrip('\r\n') for line in stream]
     except subprocess.CalledProcessError:
-        raise Error('editor command failed: %s' % (command,))
+        raise Error('editor command failed: {}'.format(command))
     finally:
         os.remove(tmpfile)
         os.rmdir(tmpdir)
@@ -259,7 +257,7 @@ def get_output_file_list(input_file_list, args):
         try:
             return read_input_file(args.output)
         except IOError as exc:
-            raise Error('error reading output file: %s' % (exc.strerror,))
+            raise Error('error reading output file: {}'.format(exc.strerror))
     else:
         return get_file_list_from_user(input_file_list, args)
 
@@ -269,7 +267,7 @@ def get_input_file_list(args):
         try:
             file_list = read_input_file(args.input)
         except IOError as exc:
-            raise Error('error reading input file: %s' % (exc.strerror,))
+            raise Error('error reading input file: {}'.format(exc.strerror))
         sanitize_file_list(file_list)
     elif args.files:
         file_list = args.files
@@ -349,7 +347,7 @@ def dir_edit(args):
     try:
         os.chdir(args.dir)
     except OSError as exc:
-        raise Error('%s: %s' % (args.dir, exc.strerror))
+        raise Error('{}: {}'.format(args.dir, exc.strerror))
     input_file_list, output_file_list = get_file_lists(args)
     mapping, inv_mapping, to_remove = generate_mapping(input_file_list, output_file_list)
     if not mapping and not to_remove:

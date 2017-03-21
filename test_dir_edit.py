@@ -48,7 +48,7 @@ def mkdir_p(path):
 
 def fake_sys_exit(arg=0):
     """Raise exception instead of exiting, for testing."""
-    raise Exception('sys.exit(%r)' % (arg,))
+    raise Exception('sys.exit({!r})'.format(arg))
 
 def dir_edit_external(*args):
     """Call dir_edit.py as external process."""
@@ -522,7 +522,8 @@ class DirEditTestCase(unittest.TestCase):
         self.dir_edit(self.tmpdir, 'a', '-r', '-o', self.tmpfile('b/y'))
         self.restore_stdout()
         self.assertEqual([('a/x', 'a/x'), ('b/y', 'b/y')], self.list_tmpdir_content())
-        self.assertRegex(self.error, '(path b%sy already exists, skip|)' % (re.escape(os.sep),))
+        regexp = '(path b{}y already exists, skip|)'.format(re.escape(os.sep))
+        self.assertRegex(self.error, regexp)
 
     def test_dest_exists_safe(self):
         """Check that existing destination error is handled in safe mode."""
