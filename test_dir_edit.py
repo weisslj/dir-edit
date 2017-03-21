@@ -240,7 +240,7 @@ class DirEditTestCase(unittest.TestCase):
     def test_input(self):
         """Check that '-i' and '--input' options work."""
         self.put_files('a1', 'a2')
-        self.dir_edit(self.tmpdir, '-i', self.tmpfile('a2', 'nonexist'), '-o', self.tmpfile('b2'))
+        self.dir_edit(self.tmpdir, '-i', self.tmpfile('a2'), '-o', self.tmpfile('b2'))
         self.assertEqual(['a1', 'b2'], self.list_tmpdir())
         self.dir_edit(self.tmpdir, '--input', self.tmpfile('b2'), '-o', self.tmpfile('c2'))
         self.assertEqual(['a1', 'c2'], self.list_tmpdir())
@@ -250,14 +250,20 @@ class DirEditTestCase(unittest.TestCase):
         with self.assertRaisesRegex(dir_edit.Error, 'error reading input file'):
             self.dir_edit(self.tmpdir, '-i', os.path.join(self.tmpdir2, 'nonexist'))
         self.assertEqual(['a1', 'c2'], self.list_tmpdir())
+        regexp = '(No such file or directory|The system cannot find the path specified)'
+        with self.assertRaisesRegex(dir_edit.Error, regexp):
+            self.dir_edit(self.tmpdir, '-i', self.tmpfile('nonexist'), '-o', self.tmpfile('foo'))
 
     def test_files(self):
         """Check that filename arguments work."""
         self.put_files('a1', 'a2')
-        self.dir_edit(self.tmpdir, 'a2', 'nonexist', '-o', self.tmpfile('b2'))
+        self.dir_edit(self.tmpdir, 'a2', '-o', self.tmpfile('b2'))
         self.assertEqual(['a1', 'b2'], self.list_tmpdir())
         self.dir_edit(self.tmpdir, 'b2', '-o', self.tmpfile('c2'))
         self.assertEqual(['a1', 'c2'], self.list_tmpdir())
+        regexp = '(No such file or directory|The system cannot find the path specified)'
+        with self.assertRaisesRegex(dir_edit.Error, regexp):
+            self.dir_edit(self.tmpdir, 'nonexist', '-o', self.tmpfile('foo'))
 
     @unittest.skipIf(os.name == 'nt', 'newlines in files not supported on Windows')
     def test_newlines(self):

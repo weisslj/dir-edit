@@ -131,15 +131,13 @@ def numkey_path(path):
     """Return a sort key that works for paths like '2/23 - foo'."""
     return tuple(numkey(s) for s in path_split_all(path))
 
-def check_input_path(path):
-    """Return true if path is a valid input path, false otherwise."""
-    if not path or not os.path.lexists(path):
-        return False
-    return True
-
-def sanitize_file_list(lst):
-    """Remove all invalid path elements from lst."""
-    lst[:] = [f for f in lst if check_input_path(f)]
+def check_file_list(file_list):
+    """Check that entries of file list exist, throw Error otherwise."""
+    try:
+        for path in file_list:
+            os.lstat(path)
+    except OSError as exc:
+        raise Error('{}: {}'.format(path, exc.strerror))
 
 def read_input_file(filename):
     """Read a file containing a single path per line, return list of paths.
@@ -268,10 +266,10 @@ def get_input_file_list(args):
             file_list = read_input_file(args.input)
         except IOError as exc:
             raise Error('error reading input file: {}'.format(exc.strerror))
-        sanitize_file_list(file_list)
+        check_file_list(file_list)
     elif args.files:
         file_list = args.files
-        sanitize_file_list(file_list)
+        check_file_list(file_list)
     else:
         if not args.recursive:
             file_list = read_dir(os.curdir, args.all)
