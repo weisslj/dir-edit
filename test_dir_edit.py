@@ -156,7 +156,8 @@ class DirEditTestCase(unittest.TestCase):
         """Test internal function for coverage."""
         self.put_files('a/b')
         self.put_dirs('c/d')
-        regex = '(File exists|Cannot create a file when that file already exists)'
+        regex_posix = re.escape(os.strerror(errno.EEXIST))
+        regex = '({}|Cannot create a file when that file already exists)'.format(regex_posix)
         with self.assertRaisesRegex(OSError, regex):
             self.put_dirs('a/b')
         self.assertEqual([('a/b', 'a/b'), ('c/d/', '<dir>')], self.list_tmpdir_content())
@@ -217,14 +218,16 @@ class DirEditTestCase(unittest.TestCase):
 
     def test_nonexisting(self):
         """Raise error if directory does not exist."""
-        regex = 'nonexist: (No such file or directory|The system cannot find the file specified)'
+        regex_posix = re.escape(os.strerror(errno.ENOENT))
+        regex = 'nonexist: .*({}|The system cannot find the file specified)'.format(regex_posix)
         with self.assertRaisesRegex(dir_edit.Error, regex):
             self.dir_edit(os.path.join(self.tmpdir, 'nonexist'))
 
     def test_nodirectory(self):
         """Raise error if path is no directory."""
         self.put_files('nodirectory')
-        regex = 'nodirectory: (Not a directory|The directory name is invalid)'
+        regex_posix = re.escape(os.strerror(errno.ENOTDIR))
+        regex = 'nodirectory: .*({}|The directory name is invalid)'.format(regex_posix)
         with self.assertRaisesRegex(dir_edit.Error, regex):
             self.dir_edit(os.path.join(self.tmpdir, 'nodirectory'))
 
@@ -251,7 +254,8 @@ class DirEditTestCase(unittest.TestCase):
         with self.assertRaisesRegex(dir_edit.Error, 'error reading input file'):
             self.dir_edit(self.tmpdir, '-i', os.path.join(self.tmpdir2, 'nonexist'))
         self.assertEqual(['a1', 'c2'], self.list_tmpdir())
-        regex = '(No such file or directory|The system cannot find the path specified)'
+        regex_posix = re.escape(os.strerror(errno.ENOENT))
+        regex = '({}|The system cannot find the file specified)'.format(regex_posix)
         with self.assertRaisesRegex(dir_edit.Error, regex):
             self.dir_edit(self.tmpdir, '-i', self.tmpfile('nonexist'), '-o', self.tmpfile('foo'))
 
@@ -262,7 +266,8 @@ class DirEditTestCase(unittest.TestCase):
         self.assertEqual(['a1', 'b2'], self.list_tmpdir())
         self.dir_edit(self.tmpdir, 'b2', '-o', self.tmpfile('c2'))
         self.assertEqual(['a1', 'c2'], self.list_tmpdir())
-        regex = '(No such file or directory|The system cannot find the path specified)'
+        regex_posix = re.escape(os.strerror(errno.ENOENT))
+        regex = '({}|The system cannot find the file specified)'.format(regex_posix)
         with self.assertRaisesRegex(dir_edit.Error, regex):
             self.dir_edit(self.tmpdir, 'nonexist', '-o', self.tmpfile('foo'))
 
@@ -526,7 +531,8 @@ class DirEditTestCase(unittest.TestCase):
     def test_safe(self):
         """Check that '-S' and '--safe' options work."""
         self.put_files('a')
-        regex = '(No such file or directory|The system cannot find the path specified)'
+        regex_posix = re.escape(os.strerror(errno.ENOENT))
+        regex = '({}|The system cannot find the file specified)'.format(regex_posix)
         with self.assertRaisesRegex(dir_edit.Error, regex):
             self.dir_edit(self.tmpdir, '-S', '-o', self.tmpfile('x/y'))
         self.assertEqual(['a'], self.list_tmpdir())
@@ -609,7 +615,8 @@ class DirEditTestCase(unittest.TestCase):
 
     def test_multibyte_error(self):
         """Check that multibyte error message works."""
-        regex = '(No such file or directory|The system cannot find the file specified)'
+        regex_posix = re.escape(os.strerror(errno.ENOENT))
+        regex = '({}|The system cannot find the file specified)'.format(regex_posix)
         with self.assertRaisesRegex(dir_edit.Error, regex):
             self.dir_edit(os.path.join(self.tmpdir, '\xc3\xa4'))
         with self.assertRaisesRegex(dir_edit.Error, regex):
