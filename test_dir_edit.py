@@ -245,7 +245,7 @@ class DirEditTestCase(unittest.TestCase):
         self.assertEqual(['a1', 'b2'], self.list_tmpdir())
         self.dir_edit(self.tmpdir, '--input', self.tmpfile('b2'), '-o', self.tmpfile('c2'))
         self.assertEqual(['a1', 'c2'], self.list_tmpdir())
-        with self.assertRaisesRegex(dir_edit.Error, 'identical entries'):
+        with self.assertRaisesRegex(dir_edit.Error, 'duplicate input entries'):
             self.dir_edit(self.tmpdir, '-i', self.tmpfile('c2', 'c2'),
                           '-o', self.tmpfile('d2', 'e2'))
         with self.assertRaisesRegex(dir_edit.Error, 'error reading input file'):
@@ -288,8 +288,10 @@ class DirEditTestCase(unittest.TestCase):
     def test_same_destination(self):
         """Abort if rename destination is the same for two or more files."""
         self.put_files('a1', 'a2')
-        with self.assertRaisesRegex(dir_edit.Error, 'same destination'):
+        with self.assertRaisesRegex(dir_edit.Error, 'duplicate target entries'):
             self.dir_edit(self.tmpdir, '-o', self.tmpfile('b', 'b'))
+        with self.assertRaisesRegex(dir_edit.Error, 'duplicate target entries'):
+            self.dir_edit(self.tmpdir, '-o', self.tmpfile('a1', 'a1'))
         self.assertEqual(['a1', 'a2'], self.list_tmpdir())
 
     def test_swap(self):

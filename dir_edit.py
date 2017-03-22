@@ -190,27 +190,25 @@ def decompose_mapping(mapping):
 def generate_mapping(input_file_list, output_file_list):
     """Generate renames and removals from file lists."""
     renames = {}
-    origins = {}
     removals = []
+    src_seen = {}
+    dst_seen = {}
     for srcfile, dstfile in zip(input_file_list, output_file_list):
         src = os.path.relpath(srcfile)
+        if src in src_seen:
+            raise Error('error, duplicate input entries {} and {}'.format(srcfile, src_seen[src]))
+        src_seen[src] = srcfile
         # empty lines indicate removal
         if not dstfile:
             removals.append(src)
             continue
         dst = os.path.relpath(dstfile)
-        if src in renames:
-            conflicts = [(origins[renames[src]], renames[src]), (src, dst)]
-            raise Error('error, two identical entries have different destination:\n' +
-                        '\n'.join('{} -> {}'.format(x, y) for x, y in conflicts))
-        if dst in origins:
-            conflicts = [(origins[dst], renames[origins[dst]]), (src, dst)]
-            raise Error('error, two or more files have the same destination:\n' +
-                        '\n'.join('{} -> {}'.format(x, y) for x, y in conflicts))
+        if dst in dst_seen:
+            raise Error('error, duplicate target entries {} and {}'.format(dstfile, dst_seen[dst]))
+        dst_seen[dst] = dstfile
         # no self loops (need no renaming!)
         if src != dst:
             renames[src] = dst
-            origins[dst] = src
     return renames, removals
 
 def get_file_list_from_user(file_list, args):
