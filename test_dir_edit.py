@@ -604,7 +604,7 @@ class DirEditTestCase(unittest.TestCase):
         # Recursive mode (y/A -> Y/a) is missing deliberately, too dangerous.
         self.put_files('x')
         self.put_dirs('Z')
-        self.dir_edit(self.tmpdir, '-o', self.tmpfile('X', 'z'))
+        self.dir_edit(self.tmpdir, '-i', self.tmpfile('x', 'Z'), '-o', self.tmpfile('X', 'z'))
         self.assertEqual(['X', 'z/'], self.list_tmpdir())
 
     def test_multibyte_error(self):

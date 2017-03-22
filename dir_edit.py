@@ -186,6 +186,13 @@ def read_dir(path, args):
     else:
         return read_dir_flat(path, args.all)
 
+def normcase(path):
+    """Normalize path case for cycle detection."""
+    if sys.platform == 'darwin':
+        # On Mac OS X 'mv -n' is case-insensitive:
+        return path.lower()
+    return os.path.normcase(path)
+
 def decompose_mapping(mapping):
     """Decompose a mapping ('bijective' bipartite graph) into paths and cycles."""
     mapping = mapping.copy()
@@ -203,7 +210,7 @@ def decompose_mapping(mapping):
             dst = mapping.pop(dst)
             path.append(dst)
         # Use normcase to allow case-renaming on Windows:
-        if os.path.normcase(src) == os.path.normcase(path[-1]):
+        if normcase(src) == normcase(path[-1]):
             cycles[src] = path
         else:
             paths[src] = path
