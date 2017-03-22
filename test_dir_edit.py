@@ -75,8 +75,8 @@ class DirEditTestCase(unittest.TestCase):
     def setUp(self):
         """Create temporary directories, declare attributes."""
         self.curdir = os.getcwd()
-        self.tmpdir = tempfile.mkdtemp()
-        self.tmpdir2 = tempfile.mkdtemp()
+        self.tmpdir = os.path.realpath(tempfile.mkdtemp())
+        self.tmpdir2 = os.path.realpath(tempfile.mkdtemp())
         self.original_stdout = []
         self.original_stderr = []
         self.stdout_buffer = []
