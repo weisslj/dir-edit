@@ -3,12 +3,13 @@
 """A setuptools based setup module."""
 
 from __future__ import unicode_literals
-from os import path
+import os
+import codecs
 from setuptools import setup
 
 # Get the long description from the README file
-HERE = path.abspath(path.dirname(__file__))
-with open(path.join(HERE, 'README.rst'), encoding='utf-8') as stream:
+HERE = os.path.abspath(os.path.dirname(__file__))
+with codecs.open(os.path.join(HERE, 'README.rst'), encoding='utf-8') as stream:
     LONG_DESCRIPTION = stream.read()
 
 setup(
