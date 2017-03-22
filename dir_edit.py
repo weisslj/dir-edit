@@ -285,7 +285,7 @@ def get_output_file_list(input_file_list, args):
     else:
         return get_file_list_from_user(input_file_list, args)
 
-def get_input_file_list(args):
+def get_input_file_list(args, orig_cwd):
     """Return input file list or raise error."""
     if args.input:
         try:
@@ -294,7 +294,9 @@ def get_input_file_list(args):
             raise Error('error reading input file: {}'.format(exc.strerror))
         check_file_list(file_list)
     elif args.files:
-        file_list = args.files
+        file_list = []
+        for path in args.files:
+            file_list.append(path if os.path.isabs(path) else os.path.join(orig_cwd, path))
         check_file_list(file_list)
     else:
         file_list = read_dir(os.curdir, args)
@@ -308,9 +310,9 @@ def get_input_file_list(args):
                 raise Error('file names with newlines are not supported, try -m!')
     return file_list
 
-def get_file_lists(args):
+def get_file_lists(args, orig_cwd):
     """Return input and output file list or raise error."""
-    input_file_list = get_input_file_list(args)
+    input_file_list = get_input_file_list(args, orig_cwd)
     output_file_list = get_output_file_list(input_file_list, args)
     if len(input_file_list) != len(output_file_list):
         raise Error('new file list has different length than old')
@@ -369,11 +371,12 @@ def execute_operations(ops, args):
 
 def dir_edit(args):
     """Main functionality."""
+    orig_cwd = os.getcwd()
     try:
         os.chdir(args.dir)
     except OSError as exc:
         raise Error('{}: {}'.format(args.dir, exc.strerror))
-    input_file_list, output_file_list = get_file_lists(args)
+    input_file_list, output_file_list = get_file_lists(args, orig_cwd)
     renames, removals = generate_mapping(input_file_list, output_file_list)
     paths, cycles = decompose_mapping(renames)
     need_tmpdir = cycles or mapping_needs_tmpdir(renames)

@@ -262,9 +262,9 @@ class DirEditTestCase(unittest.TestCase):
     def test_files(self):
         """Check that filename arguments work."""
         self.put_files('a1', 'a2')
-        self.dir_edit(self.tmpdir, 'a2', '-o', self.tmpfile('b2'))
+        self.dir_edit(self.tmpdir, os.path.join(self.tmpdir, 'a2'), '-o', self.tmpfile('b2'))
         self.assertEqual(['a1', 'b2'], self.list_tmpdir())
-        self.dir_edit(self.tmpdir, 'b2', '-o', self.tmpfile('c2'))
+        self.dir_edit(self.tmpdir, os.path.join(self.tmpdir, 'b2'), '-o', self.tmpfile('c2'))
         self.assertEqual(['a1', 'c2'], self.list_tmpdir())
         regex_posix = re.escape(os.strerror(errno.ENOENT))
         regex = '({}|The system cannot find the file specified)'.format(regex_posix)
@@ -549,7 +549,7 @@ class DirEditTestCase(unittest.TestCase):
         """Check that existing destination error is handled."""
         self.put_files('a/x', 'b/y')
         self.setup_stdout()
-        self.dir_edit(self.tmpdir, 'a', '-r', '-o', self.tmpfile('b/y'))
+        self.dir_edit(self.tmpdir, os.path.join(self.tmpdir, 'a'), '-r', '-o', self.tmpfile('b/y'))
         self.restore_stdout()
         self.assertEqual([('a/x', 'a/x'), ('b/y', 'b/y')], self.list_tmpdir_content())
         regex = '(path b{}y already exists, skip|)'.format(re.escape(os.sep))
