@@ -80,7 +80,7 @@ def renames_ops(src, dst, tmpdir):
     ops = []
     dst_dir = os.path.dirname(dst)
     if dst.startswith(src + os.sep):
-        tmp_src = os.path.join(tmpdir, 's_' + os.path.basename(src))
+        tmp_src = os.path.join(tmpdir, os.path.basename(src))
         ops += rename_ops(src, tmp_src)
         ops += [((os.makedirs, 'mkdir -p'), (dst_dir,))]
         ops += rename_ops(tmp_src, dst)
@@ -305,7 +305,7 @@ def generate_operations(paths, cycles, removals, need_tmpdir, args):
             else:
                 ops += renames_ops(src, dst, tmpdir)
     for cycle in cycles:
-        tmppath = os.path.join(tmpdir, 'c_' + os.path.basename(cycle[0]))
+        tmppath = os.path.join(tmpdir, os.path.basename(cycle[0]))
         ops += rename_ops(cycle[0], tmppath)
         cycle[0] = tmppath
         for dst, src in pairwise(reversed(cycle)):
