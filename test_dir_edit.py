@@ -449,6 +449,20 @@ class DirEditTestCase(unittest.TestCase):
         self.dir_edit(self.tmpdir, '--dry-run', '-o', self.tmpfile('d'))
         self.assertEqual(['b'], self.list_tmpdir())
 
+    def test_verbose_logfile(self):
+        """Check that '-v', '--verbose', '-L', and '--logfile' options work."""
+        self.put_files('a')
+        logfile = os.path.join(self.tmpdir2, 'logfile')
+        self.dir_edit(self.tmpdir, '--verbose', '--logfile', logfile, '-o', self.tmpfile('b'))
+        self.assertRegex(open(logfile).read(), r'^cd .*\nmv -n a b\n$')
+        self.dir_edit(self.tmpdir, '--verbose', '-L', logfile, '-o', self.tmpfile('c'))
+        self.assertRegex(open(logfile).read(), r'^cd .*\nmv -n b c\n$')
+        self.dir_edit(self.tmpdir, '-v', '--logfile', logfile, '-o', self.tmpfile('d'))
+        self.assertRegex(open(logfile).read(), r'^cd .*\nmv -n c d\n$')
+        self.dir_edit(self.tmpdir, '-v', '-L', logfile, '-o', self.tmpfile('e'))
+        self.assertRegex(open(logfile).read(), r'^cd .*\nmv -n d e\n$')
+        self.assertEqual(['e'], self.list_tmpdir())
+
     def test_filenames(self):
         """Test that filenames with special characters work."""
         self.put_files('-', "'")
@@ -643,6 +657,9 @@ class DirEditDryRunVerboseTestCase(DirEditTestCase):
         except subprocess.CalledProcessError as exc:
             raise dir_edit.Error(exc.output)
     def test_dry_run(self):
+        """Not necessary here."""
+        pass
+    def test_verbose_logfile(self):
         """Not necessary here."""
         pass
 
