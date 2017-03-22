@@ -20,6 +20,16 @@ every line is a filename in the directory. This enables the user to rename
 editor, the script checks the file for consistency, detects rename loops and
 finally performs the changes.
 
+News
+----
+
+=====  ==========  ===========================================================
+2.0.0  2017-03-22  Bugfixes, Python 3 support, ``-o`` and ``-L`` option,
+                   extensive test suite
+1.1    2010-11-21  Bugfixes
+1.0    2010-05-06  First working version
+=====  ==========  ===========================================================
+
 Usage
 -----
 
@@ -60,3 +70,12 @@ Rename pictures with maximum directory depth 2::
 
   find pics -maxdepth 2 -type f -iregex ".*\.\(jpg\|png\)" > file_list
   dir_edit -i file_list
+
+Copyright
+=========
+
+| Copyright (C) 2010-2017 Johannes Weißl
+| License GPLv3+:
+| GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+| This is free software: you are free to change and redistribute it.
+| There is NO WARRANTY, to the extent permitted by law.
