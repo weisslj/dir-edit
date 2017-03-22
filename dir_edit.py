@@ -393,8 +393,8 @@ def main_throws(args=None):
 Modify contents of DIR using an editor. Creates a temporary file, where every
 line is a filename in the directory DIR. Then an editor is started, enabling
 the user to rename or delete (blank line) entries. After saving, the script
-performs a consistency check, detects rename loops / paths and finally executes
-the changes.'''
+performs a consistency check, detects rename loops and finally executes the
+changes.'''
     #
     default_editor = 'vi'
     if os.name == 'nt':
@@ -406,12 +406,12 @@ the changes.'''
     parser.add_argument('dir', metavar='DIR', nargs='?', default=os.curdir,
                         help='directory to edit (default: current directory)')
     parser.add_argument('files', metavar='FILES', nargs='*',
-                        help='limit to these filenames (relative to DIR)')
+                        help='limit to these filenames (default: all non-hidden in directory)')
     parser.add_argument('--version', action='version', version='%(prog)s 1.1')
     parser.add_argument('-a', '--all', action='store_true', default=False,
                         help='include entries starting with . (besides . and ..)')
     parser.add_argument('-d', '--dry-run', action='store_true',
-                        default=False, help='don\'t do any file system modifications')
+                        default=False, help='don\'t perform any file system modifications')
     parser.add_argument('-e', '--editor', metavar='CMD', default=default_editor,
                         help='use CMD to edit dirfile (default: $EDITOR or vi)')
     parser.add_argument('-i', '--input', metavar='FILE',
@@ -420,7 +420,7 @@ the changes.'''
     parser.add_argument('-o', '--output', metavar='FILE',
                         help='FILE containing paths after being edited (-e is ignored)')
     parser.add_argument('-m', '--mangle-newlines', action='store_true',
-                        default=False, help='replace newlines in files through blanks')
+                        default=False, help='replace newlines in files through spaces')
     parser.add_argument('-n', '--numeric-sort', action='store_true',
                         default=False, help='sort entries according to string numerical value')
     parser.add_argument('-R', '--remove-recursive', action='store_true',
