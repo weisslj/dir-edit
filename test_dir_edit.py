@@ -642,7 +642,6 @@ class DirEditDryRunVerboseTestCase(DirEditTestCase):
                                     stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as exc:
             raise dir_edit.Error(exc.output)
-
     def test_dry_run(self):
         """Not necessary here."""
         pass
