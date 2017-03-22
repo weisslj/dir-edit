@@ -358,7 +358,8 @@ def execute_operations(ops, args):
     """Execute file system operations."""
     for (fun, cmd), fargs in ops:
         if args.verbose:
-            msg = cmd + ' -- ' + ' '.join(shlex.quote(farg) for farg in fargs)
+            sep = ' -- ' if any(farg.startswith('-') for farg in fargs) else ' '
+            msg = cmd + sep + ' '.join(shlex.quote(farg) for farg in fargs)
             if sys.version_info < (3, 0):
                 msg = msg.decode(errors='replace')
             print(msg, file=args.logfile)
