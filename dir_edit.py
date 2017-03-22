@@ -408,7 +408,7 @@ changes.'''
                         help='directory to edit (default: current directory)')
     parser.add_argument('files', metavar='FILES', nargs='*',
                         help='limit to these filenames (default: all non-hidden in directory)')
-    parser.add_argument('--version', action='version', version='%(prog)s 1.1')
+    parser.add_argument('--version', action='version', version='%(prog)s 2.0.0')
     parser.add_argument('-a', '--all', action='store_true', default=False,
                         help='include entries starting with . (besides . and ..)')
     parser.add_argument('-d', '--dry-run', action='store_true',

@@ -14,7 +14,7 @@ with codecs.open(os.path.join(HERE, 'README.rst'), encoding='utf-8') as stream:
 
 setup(
     name='dir-edit',
-    version='1.1',
+    version='2.0.0',
     description='Rename or remove files in a directory using an editor',
     long_description=LONG_DESCRIPTION,
     author='Johannes Weißl',
