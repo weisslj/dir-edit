@@ -134,7 +134,7 @@ def remove_hidden(names, all_entries=False):
     if not all_entries:
         names[:] = [name for name in names if not name.startswith('.')]
 
-def read_dir(path, all_entries=False):
+def read_dir_flat(path, all_entries=False):
     """Return a list of paths in directory at path. If all_entries is not
     true, exclude all entries starting with a dot (.).
     """
@@ -157,57 +157,61 @@ def read_dir_recursive(path, all_entries=False):
         remove_hidden(dirs, all_entries)
     return paths
 
-def decompose_mapping(graph, inv_graph):
-    """Decompose a mapping ('bijective' bipartite graph) into
-    paths and cycles and returns them.
-    """
-    graph = graph.copy()
+def read_dir(path, args):
+    """Return a list of paths in directory at path, possibly recursively."""
+    if args.recursive:
+        return read_dir_recursive(path, args.all)
+    else:
+        return read_dir_flat(path, args.all)
+
+def decompose_mapping(mapping):
+    """Decompose a mapping ('bijective' bipartite graph) into paths and cycles."""
+    mapping = mapping.copy()
     paths = {}
     cycles = {}
-    srcs = set(graph.keys()) - set(inv_graph.keys())
-    while graph:
+    srcs = set(mapping.keys()) - set(mapping.values())
+    while mapping:
         try:
             src = srcs.pop()
-            dst = graph.pop(src)
+            dst = mapping.pop(src)
         except KeyError:
-            src, dst = graph.popitem()
+            src, dst = mapping.popitem()
         path = [src, dst]
-        while dst in graph:
-            dst = graph.pop(dst)
+        while dst in mapping:
+            dst = mapping.pop(dst)
             path.append(dst)
         # Use normcase to allow case-renaming on Windows:
         if os.path.normcase(src) == os.path.normcase(path[-1]):
             cycles[src] = path
         else:
             paths[src] = path
-    return paths, cycles
+    return paths.values(), cycles.values()
 
 def generate_mapping(input_file_list, output_file_list):
-    """Generate mapping and inverse mapping from file lists."""
-    mapping = {}
-    inv_mapping = {}
-    to_remove = []
+    """Generate renames and removals from file lists."""
+    renames = {}
+    origins = {}
+    removals = []
     for srcfile, dstfile in zip(input_file_list, output_file_list):
-        srcpath = os.path.relpath(srcfile)
+        src = os.path.relpath(srcfile)
         # empty lines indicate removal
         if not dstfile:
-            to_remove.append(srcpath)
+            removals.append(src)
             continue
-        dstpath = os.path.relpath(dstfile)
-        if srcpath in mapping:
-            conflicts = [(inv_mapping[mapping[srcpath]], mapping[srcpath]), (srcpath, dstpath)]
+        dst = os.path.relpath(dstfile)
+        if src in renames:
+            conflicts = [(origins[renames[src]], renames[src]), (src, dst)]
             raise Error('error, two identical entries have different destination:\n' +
                         '\n'.join('{} -> {}'.format(x, y) for x, y in conflicts))
-        if dstpath in inv_mapping:
-            conflicts = [(inv_mapping[dstpath], mapping[inv_mapping[dstpath]]), (srcpath, dstpath)]
+        if dst in origins:
+            conflicts = [(origins[dst], renames[origins[dst]]), (src, dst)]
             raise Error('error, two or more files have the same destination:\n' +
                         '\n'.join('{} -> {}'.format(x, y) for x, y in conflicts))
         # no self loops (need no renaming!)
-        if srcpath == dstpath:
-            continue
-        mapping[srcpath] = dstpath
-        inv_mapping[dstpath] = srcpath
-    return mapping, inv_mapping, to_remove
+        if src != dst:
+            renames[src] = dst
+            origins[dst] = src
+    return renames, removals
 
 def get_file_list_from_user(file_list, args):
     """Return user-edited file_list or raise error."""
@@ -256,10 +260,7 @@ def get_input_file_list(args):
         file_list = args.files
         check_file_list(file_list)
     else:
-        if not args.recursive:
-            file_list = read_dir(os.curdir, args.all)
-        else:
-            file_list = read_dir_recursive(os.curdir, args.all)
+        file_list = read_dir(os.curdir, args)
         key = textkey_path if not args.numeric_sort else numkey_path
         file_list.sort(key=key)
     if not file_list:
@@ -280,8 +281,8 @@ def get_file_lists(args):
 
 def mapping_needs_tmpdir(mapping):
     """Check if mapping needs a temporary directory."""
-    for srcpath, dstpath in mapping.items():
-        if srcpath == os.path.dirname(dstpath) or dstpath.startswith(srcpath + os.sep):
+    for src, dst in mapping.items():
+        if src == os.path.dirname(dst) or dst.startswith(src + os.sep):
             return True
     return False
 
@@ -290,22 +291,22 @@ def tmpname():
     characters = 'abcdefghijklmnopqrstuvwxyz0123456789_'
     return 'tmp_' + ''.join(random.choice(characters) for _ in range(20))
 
-def generate_operations(paths, cycles, to_remove, need_tmpdir, args):
+def generate_operations(paths, cycles, removals, need_tmpdir, args):
     """Generate file system operations."""
     ops = []
     ops += [((None, 'cd'), (os.path.realpath(os.curdir),))]
     tmpdir = tmpname()
     if need_tmpdir:
         ops += [((os.mkdir, 'mkdir'), (tmpdir,))]
-    for srcpath in to_remove:
-        ops += remove_ops(srcpath, args.remove_recursive)
-    for path in paths.values():
+    for filename in removals:
+        ops += remove_ops(filename, args.remove_recursive)
+    for path in paths:
         for dst, src in pairwise(reversed(path)):
             if args.safe:
                 ops += rename_ops(src, dst)
             else:
                 ops += renames_ops(src, dst, tmpdir)
-    for cycle in cycles.values():
+    for cycle in cycles:
         tmppath = os.path.join(tmpdir, 'c_' + os.path.basename(cycle[0]))
         ops += rename_ops(cycle[0], tmppath)
         cycle[0] = tmppath
@@ -337,19 +338,17 @@ def dir_edit(args):
     except OSError as exc:
         raise Error('{}: {}'.format(args.dir, exc.strerror))
     input_file_list, output_file_list = get_file_lists(args)
-    mapping, inv_mapping, to_remove = generate_mapping(input_file_list, output_file_list)
-    if not mapping and not to_remove:
-        return
-    paths, cycles = decompose_mapping(mapping, inv_mapping)
-    need_tmpdir = cycles or mapping_needs_tmpdir(mapping)
-    ops = generate_operations(paths, cycles, to_remove, need_tmpdir, args)
+    renames, removals = generate_mapping(input_file_list, output_file_list)
+    paths, cycles = decompose_mapping(renames)
+    need_tmpdir = cycles or mapping_needs_tmpdir(renames)
+    ops = generate_operations(paths, cycles, removals, need_tmpdir, args)
     execute_operations(ops, args)
 
 def main_throws(args=None):
     """Main function, throws exception on error."""
-
+    # For locale-specific sorting of filenames:
     locale.setlocale(locale.LC_ALL, '')
-
+    #
     usage = '%(prog)s [OPTION]... [DIR] [FILES]...'
     desc = '''\
 Modify contents of DIR using an editor. Creates a temporary file, where every
@@ -357,15 +356,14 @@ line is a filename in the directory DIR. Then an editor is started, enabling
 the user to rename or delete (blank line) entries. After saving, the script
 performs a consistency check, detects rename loops / paths and finally executes
 the changes.'''
-
+    #
     default_editor = 'vi'
     if os.name == 'nt':
         # Windows opens default editor if text file is opened directly:
         default_editor = ''
     default_editor = os.getenv('EDITOR', default_editor)
-
+    #
     parser = argparse.ArgumentParser(usage=usage, description=desc)
-
     parser.add_argument('dir', metavar='DIR', nargs='?', default=os.curdir,
                         help='directory to edit (default: current directory)')
     parser.add_argument('files', metavar='FILES', nargs='*',
@@ -394,9 +392,7 @@ the changes.'''
                         default=False, help='do not create or remove directories while renaming')
     parser.add_argument('-v', '--verbose', action='store_true', default=False,
                         help='output filesystem modifications to stdout')
-
     args = parser.parse_args(args)
-
     dir_edit(args)
 
 def main(args=None):
