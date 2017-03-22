@@ -361,7 +361,7 @@ def execute_operations(ops, args):
             msg = cmd + ' -- ' + ' '.join(shlex.quote(farg) for farg in fargs)
             if sys.version_info < (3, 0):
                 msg = msg.decode(errors='replace')
-            print(msg)
+            print(msg, file=args.logfile)
         if not args.dry_run and fun is not None:
             try:
                 fun(*fargs)
@@ -429,8 +429,11 @@ the changes.'''
                         help='list DIR recursively')
     parser.add_argument('-S', '--safe', action='store_true',
                         default=False, help='do not create or remove directories while renaming')
+    parser.add_argument('-L', '--logfile', metavar='FILE',
+                        type=argparse.FileType('w'), default=sys.stdout,
+                        help='path to logfile for verbose mode (default: stdout)')
     parser.add_argument('-v', '--verbose', action='store_true', default=False,
-                        help='output filesystem modifications to stdout')
+                        help='output filesystem modifications to logfile')
     args = parser.parse_args(args)
     dir_edit(args)
 
