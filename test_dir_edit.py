@@ -294,6 +294,21 @@ class DirEditTestCase(unittest.TestCase):
             self.dir_edit(self.tmpdir, '-o', self.tmpfile('a1', 'a1'))
         self.assertEqual(['a1', 'a2'], self.list_tmpdir())
 
+    def test_relpath(self):
+        """Abort if not all input and output paths are relative to the given directory."""
+        self.put_files('a', 'tmp/b')
+        tmpdir = os.path.join(self.tmpdir, 'tmp')
+        outside = self.tmpfile('x')
+        regex = 'leads outside given directory'
+        with self.assertRaisesRegex(dir_edit.Error, regex):
+            self.dir_edit(tmpdir, '-o', self.tmpfile('../x'))
+        with self.assertRaisesRegex(dir_edit.Error, regex):
+            self.dir_edit(tmpdir, '-o', self.tmpfile(outside))
+        with self.assertRaisesRegex(dir_edit.Error, regex):
+            self.dir_edit(tmpdir, '-i', self.tmpfile('../a'), '-o', self.tmpfile('x'))
+        with self.assertRaisesRegex(dir_edit.Error, regex):
+            self.dir_edit(tmpdir, '-i', self.tmpfile(outside), '-o', self.tmpfile('x'))
+
     def test_swap(self):
         """Swapping filenames, smallest cycle."""
         self.put_files('a', 'b')

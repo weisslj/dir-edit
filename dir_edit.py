@@ -209,6 +209,16 @@ def decompose_mapping(mapping):
             paths[src] = path
     return paths.values(), cycles.values()
 
+def make_relpath(path):
+    """Return relative path to current directory, raise error if it leads outside."""
+    try:
+        relpath = os.path.relpath(path)
+        if relpath.startswith(os.pardir + os.sep):
+            raise Error('error, path {} leads outside given directory'.format(path))
+        return relpath
+    except ValueError as exc:  # only on Windows, e.g. if drive letters differ
+        raise Error('{}: {}'.format(path, exc))
+
 def generate_mapping(input_file_list, output_file_list):
     """Generate renames and removals from file lists."""
     renames = {}
@@ -216,7 +226,7 @@ def generate_mapping(input_file_list, output_file_list):
     src_seen = {}
     dst_seen = {}
     for srcfile, dstfile in zip(input_file_list, output_file_list):
-        src = os.path.relpath(srcfile)
+        src = make_relpath(srcfile)
         if src in src_seen:
             raise Error('error, duplicate input entries {} and {}'.format(srcfile, src_seen[src]))
         src_seen[src] = srcfile
@@ -224,7 +234,7 @@ def generate_mapping(input_file_list, output_file_list):
         if not dstfile:
             removals.append(src)
             continue
-        dst = os.path.relpath(dstfile)
+        dst = make_relpath(dstfile)
         if dst in dst_seen:
             raise Error('error, duplicate target entries {} and {}'.format(dstfile, dst_seen[dst]))
         dst_seen[dst] = dstfile
