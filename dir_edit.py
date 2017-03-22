@@ -46,18 +46,42 @@ def warn(msg, *args, **kwargs):
         msg = msg.decode(errors='replace')  # pylint: disable=redefined-variable-type
     print(msg, file=sys.stderr)
 
-def remove_ops(path, recursive=False):
+def cd_ops(path):
+    """Return operations for changing current directory, only needed for verbose mode."""
+    return [((None, 'cd'), (path,))]
+
+def rmdir_ops(path):
+    """Return operations for removing empty directory."""
+    return [((os.rmdir, 'rmdir'), (path,))]
+
+def makedirs_ops(path):
+    """Return operations for creating directory and all intermediate-level directories."""
+    return [((os.makedirs, 'mkdir -p'), (path,))]
+
+def mkdir_ops(path):
+    """Return operations for creating directory."""
+    return [((os.mkdir, 'mkdir'), (path,))]
+
+def remove_ops(path):
+    """Return operations for removing a file."""
+    return [((os.remove, 'unlink'), (path,))]
+
+def rmtree_ops(path):
+    """Return operations for recursively removing a directory."""
+    return [((shutil.rmtree, 'rm -r'), (path,))]
+
+def path_remove_ops(path, recursive=False):
     """Return operations for removing path, optionally recursive."""
     if os.path.islink(path) or not os.path.isdir(path):
-        return [((os.remove, 'unlink'), (path,))]
-    if os.listdir(path):
+        return remove_ops(path)
+    elif os.listdir(path):
         if recursive:
-            return [((shutil.rmtree, 'rm -r'), (path,))]
+            return rmtree_ops(path)
         else:
             warn('not removing directory {}: not empty (try -R)', path)
             return []
     else:
-        return [((os.rmdir, 'rmdir'), (path,))]
+        return rmdir_ops(path)
 
 def rename(src, dst):
     """Rename src path to dst, do not overwrite existing file."""
@@ -77,22 +101,20 @@ def renames_ops(src, dst, tmpdir):
     a subdirectory with the same name, e.g.:
     mv x x/new_x
     """
-    ops = []
     dst_dir = os.path.dirname(dst)
     if dst.startswith(src + os.sep):
-        tmp_src = os.path.join(tmpdir, os.path.basename(src))
-        ops += rename_ops(src, tmp_src)
-        ops += [((os.makedirs, 'mkdir -p'), (dst_dir,))]
-        ops += rename_ops(tmp_src, dst)
+        tmp = os.path.join(tmpdir, os.path.basename(src))
+        return rename_ops(src, tmp) + makedirs_ops(dst_dir) + rename_ops(tmp, dst)
+    else:
+        ops = []
+        if dst_dir and not os.path.lexists(dst_dir):
+            ops += makedirs_ops(dst_dir)
+        ops += rename_ops(src, dst)
+        head, tail = os.path.split(src)
+        while head and not dst.startswith(head + os.sep) and os.listdir(head) == [tail]:
+            ops += rmdir_ops(head)
+            head, tail = os.path.split(head)
         return ops
-    if dst_dir and not os.path.lexists(dst_dir):
-        ops += [((os.makedirs, 'mkdir -p'), (dst_dir,))]
-    ops += rename_ops(src, dst)
-    head, tail = os.path.split(src)
-    while head and not dst.startswith(head + os.sep) and os.listdir(head) == [tail]:
-        ops += [((os.rmdir, 'rmdir'), (head,))]
-        head, tail = os.path.split(head)
-    return ops
 
 NUMKEY_REGEX = re.compile(r'(\s*[+-]?[0-9]+\.?[0-9]*\s*)(.*)')
 def numkey(string):
@@ -291,13 +313,12 @@ def tmpname():
 
 def generate_operations(paths, cycles, removals, need_tmpdir, args):
     """Generate file system operations."""
-    ops = []
-    ops += [((None, 'cd'), (os.path.realpath(os.curdir),))]
+    ops = cd_ops(os.path.realpath(os.curdir))
     tmpdir = tmpname()
     if need_tmpdir:
-        ops += [((os.mkdir, 'mkdir'), (tmpdir,))]
+        ops += mkdir_ops(tmpdir)
     for filename in removals:
-        ops += remove_ops(filename, args.remove_recursive)
+        ops += path_remove_ops(filename, args.remove_recursive)
     for path in paths:
         for dst, src in pairwise(reversed(path)):
             if args.safe:
@@ -305,13 +326,13 @@ def generate_operations(paths, cycles, removals, need_tmpdir, args):
             else:
                 ops += renames_ops(src, dst, tmpdir)
     for cycle in cycles:
-        tmppath = os.path.join(tmpdir, os.path.basename(cycle[0]))
-        ops += rename_ops(cycle[0], tmppath)
-        cycle[0] = tmppath
+        tmp = os.path.join(tmpdir, os.path.basename(cycle[0]))
+        ops += rename_ops(cycle[0], tmp)
+        cycle[0] = tmp
         for dst, src in pairwise(reversed(cycle)):
             ops += rename_ops(src, dst)
     if need_tmpdir:
-        ops += [((os.rmdir, 'rmdir'), (tmpdir,))]
+        ops += rmdir_ops(tmpdir)
     return ops
 
 def execute_operations(ops, args):
