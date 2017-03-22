@@ -7,7 +7,7 @@
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-"""Rename or remove files in a directory using an editor (e.g. vi)."""
+"""Rename or remove files in a directory using an editor."""
 
 from __future__ import print_function
 import sys

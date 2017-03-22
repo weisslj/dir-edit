@@ -1,7 +1,7 @@
 dir-edit
 ========
 
-Rename or remove files in a directory using an editor (e.g. vi)
+Rename or remove files in a directory using an editor
 
 Motivation
 ----------
