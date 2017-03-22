@@ -19,7 +19,7 @@ setup(
     long_description=LONG_DESCRIPTION,
     author='Johannes Weißl',
     author_email='jargon@molb.org',
-    url='http://github.com/weisslj/dir-edit',
+    url='https://github.com/weisslj/dir-edit',
     license='GPLv3+',
     classifiers=[
         'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
