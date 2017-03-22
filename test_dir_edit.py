@@ -532,7 +532,7 @@ class DirEditTestCase(unittest.TestCase):
         """Check that '-S' and '--safe' options work."""
         self.put_files('a')
         regex_posix = re.escape(os.strerror(errno.ENOENT))
-        regex = '({}|The system cannot find the file specified)'.format(regex_posix)
+        regex = '({}|The system cannot find the path specified)'.format(regex_posix)
         with self.assertRaisesRegex(dir_edit.Error, regex):
             self.dir_edit(self.tmpdir, '-S', '-o', self.tmpfile('x/y'))
         self.assertEqual(['a'], self.list_tmpdir())
