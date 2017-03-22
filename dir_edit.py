@@ -64,7 +64,7 @@ def mkdir_ops(path):
 
 def remove_ops(path):
     """Return operations for removing a file."""
-    return [((os.remove, 'unlink'), (path,))]
+    return [((os.remove, 'rm'), (path,))]
 
 def rmtree_ops(path):
     """Return operations for recursively removing a directory."""
