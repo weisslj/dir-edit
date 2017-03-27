@@ -508,6 +508,12 @@ class DirEditTestCase(unittest.TestCase):
         self.dir_edit(self.tmpdir, '-r', '-o', self.tmpfile('x/b/c/d'))
         self.assertEqual(['x/b/c/d'], self.list_tmpdir())
 
+    def test_recursive_dir_rename(self):
+        """Check that intermediate directories can be renamed in recursive mode."""
+        self.put_files('x/y/a', 'x/y/b')
+        self.dir_edit(self.tmpdir, '-r', '-o', self.tmpfile('x/z/a', 'x/z/b'))
+        self.assertEqual(['x/z/a', 'x/z/b'], self.list_tmpdir())
+
     def test_recursive_remove(self):
         """Test that recursive remove works."""
         self.put_files('a/b', 'x/y/z1', 'x/y/z2')
@@ -548,14 +554,14 @@ class DirEditTestCase(unittest.TestCase):
         self.dir_edit(self.tmpdir, '-r', '-o', self.tmpfile('a/b/c/d'))
         self.assertEqual(['a/b/c/d'], self.list_tmpdir())
 
-    def test_safe(self):
-        """Check that '-S' and '--safe' options work."""
-        self.put_files('a')
-        regex_posix = re.escape(os.strerror(errno.ENOENT))
-        regex = '({}|The system cannot find the path specified)'.format(regex_posix)
+    def test_operations_error(self):
+        """Check that file system operation errors are handled correctly."""
+        self.put_files('a', 'x')
+        regex_posix = re.escape(os.strerror(errno.EEXIST))
+        regex = '({}|Cannot create a file when that file already exists)'.format(regex_posix)
         with self.assertRaisesRegex(dir_edit.Error, regex):
-            self.dir_edit(self.tmpdir, '-S', '-o', self.tmpfile('x/y'))
-        self.assertEqual(['a'], self.list_tmpdir())
+            self.dir_edit(self.tmpdir, '-i', self.tmpfile('a'), '-o', self.tmpfile('x/y'))
+        self.assertEqual(['a', 'x'], self.list_tmpdir())
 
     def test_numeric_sort(self):
         """Check that '-n' and '--numeric-sort' options work."""
@@ -566,7 +572,7 @@ class DirEditTestCase(unittest.TestCase):
                          self.list_tmpdir_content())
 
     def test_dest_exists_recursive(self):
-        """Check that existing destination error is handled."""
+        """Check that existing destination error is handled in recursive mode."""
         self.put_files('a/x', 'b/y')
         self.setup_stdout()
         self.dir_edit(self.tmpdir, os.path.join(self.tmpdir, 'a'), '-r', '-o', self.tmpfile('b/y'))
@@ -575,11 +581,11 @@ class DirEditTestCase(unittest.TestCase):
         regex = '(path b{}y already exists, skip|)'.format(re.escape(os.sep))
         self.assertRegex(self.error, regex)
 
-    def test_dest_exists_safe(self):
-        """Check that existing destination error is handled in safe mode."""
+    def test_dest_exists(self):
+        """Check that existing destination error is handled."""
         self.put_files('a', 'b')
         self.setup_stdout()
-        self.dir_edit(self.tmpdir, '-S', '-i', self.tmpfile('a'), '-o', self.tmpfile('b'))
+        self.dir_edit(self.tmpdir, '-i', self.tmpfile('a'), '-o', self.tmpfile('b'))
         self.restore_stdout()
         self.assertEqual([('a', 'a'), ('b', 'b')], self.list_tmpdir_content())
         self.assertRegex(self.error, '(path b already exists, skip|)')

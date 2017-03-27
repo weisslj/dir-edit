@@ -54,9 +54,24 @@ def rmdir_ops(path):
     """Return operations for removing empty directory."""
     return [((os.rmdir, 'rmdir'), (path,))]
 
+MAKEDIRS = os.makedirs
+if sys.version_info < (3, 2):
+    def makedirs_compat(name, exist_ok=False, **kwargs):
+        """Compatibility function with Python 3.2 os.makedirs()."""
+        try:
+            os.makedirs(name, **kwargs)
+        except OSError:
+            if not exist_ok or not os.path.isdir(name):
+                raise
+    MAKEDIRS = makedirs_compat
+
+def makedirs_exist_ok(path):
+    """Like os.makedirs(), but ignores existing directories."""
+    MAKEDIRS(path, exist_ok=True)
+
 def makedirs_ops(path):
     """Return operations for creating directory and all intermediate-level directories."""
-    return [((os.makedirs, 'mkdir -p'), (path,))]
+    return [((makedirs_exist_ok, 'mkdir -p'), (path,))]
 
 def mkdir_ops(path):
     """Return operations for creating directory."""
@@ -94,27 +109,6 @@ def rename(src, dst):
 def rename_ops(src, dst):
     """Return operations for renaming src path to dst."""
     return [((rename, 'mv -n'), (src, dst))]
-
-def renames_ops(src, dst, tmpdir):
-    """Return operations for renaming src to dst, possibly creating needed or
-    removing unneeded directories. Also handles the case when moving a file to
-    a subdirectory with the same name, e.g.:
-    mv x x/new_x
-    """
-    dst_dir = os.path.dirname(dst)
-    if dst.startswith(src + os.sep):
-        tmp = os.path.join(tmpdir, os.path.basename(src))
-        return rename_ops(src, tmp) + makedirs_ops(dst_dir) + rename_ops(tmp, dst)
-    else:
-        ops = []
-        if dst_dir and not os.path.lexists(dst_dir):
-            ops += makedirs_ops(dst_dir)
-        ops += rename_ops(src, dst)
-        head, tail = os.path.split(src)
-        while head and not dst.startswith(head + os.sep) and os.listdir(head) == [tail]:
-            ops += rmdir_ops(head)
-            head, tail = os.path.split(head)
-        return ops
 
 NUMKEY_REGEX = re.compile(r'(\s*[+-]?[0-9]+\.?[0-9]*\s*)(.*)')
 def numkey(string):
@@ -318,40 +312,64 @@ def get_file_lists(args, orig_cwd):
         raise Error('new file list has different length than old')
     return input_file_list, output_file_list
 
-def mapping_needs_tmpdir(mapping):
-    """Check if mapping needs a temporary directory."""
-    for src, dst in mapping.items():
-        if src == os.path.dirname(dst) or dst.startswith(src + os.sep):
-            return True
-    return False
-
 def tmpname():
     """Return temporary file name."""
     characters = 'abcdefghijklmnopqrstuvwxyz0123456789_'
     return 'tmp_' + ''.join(random.choice(characters) for _ in range(20))
 
-def generate_operations(paths, cycles, removals, need_tmpdir, args):
+def dirnames(path):
+    """Yield all os.path.dirname()s."""
+    head, _tail = os.path.split(path)
+    while head:
+        yield head
+        head, _tail = os.path.split(head)
+
+def create_tmpdir(ops, tmpdir):
+    """Append operations for creating temporary directory to ops, return path."""
+    if not tmpdir:
+        tmpdir = tmpname()
+        ops += mkdir_ops(tmpdir)
+    return tmpdir
+
+def remove_tmpdir(tmpdir):
+    """Return operations for removing temporary directory."""
+    return rmdir_ops(tmpdir) if tmpdir else []
+
+def generate_operations(paths, cycles, removals, args):
     """Generate file system operations."""
     ops = cd_ops(os.path.realpath(os.curdir))
-    tmpdir = tmpname()
-    if need_tmpdir:
-        ops += mkdir_ops(tmpdir)
-    for filename in removals:
-        ops += path_remove_ops(filename, args.remove_recursive)
+    src_dirs = set()
+    dst_dirs = set()
+    tmpdir = ''
     for path in paths:
         for dst, src in pairwise(reversed(path)):
-            if args.safe:
-                ops += rename_ops(src, dst)
+            if not dst.startswith(src + os.sep):
+                src_dirs |= set(dirnames(src))
+                dst_dirs |= set(dirnames(dst))
+    for filename in removals:
+        ops += path_remove_ops(filename, args.remove_recursive)
+    for filename in sorted(dst_dirs - src_dirs, key=len):
+        ops += makedirs_ops(filename)
+    for path in paths:
+        for dst, src in pairwise(reversed(path)):
+            if dst.startswith(src + os.sep):
+                tmpdir = create_tmpdir(ops, tmpdir)
+                tmp = os.path.join(tmpdir, os.path.basename(src))
+                ops += rename_ops(src, tmp)
+                ops += makedirs_ops(os.path.dirname(dst))
+                ops += rename_ops(tmp, dst)
             else:
-                ops += renames_ops(src, dst, tmpdir)
+                ops += rename_ops(src, dst)
+    for filename in sorted(src_dirs - dst_dirs, key=len, reverse=True):
+        ops += rmdir_ops(filename)
     for cycle in cycles:
+        tmpdir = create_tmpdir(ops, tmpdir)
         tmp = os.path.join(tmpdir, os.path.basename(cycle[0]))
         ops += rename_ops(cycle[0], tmp)
         cycle[0] = tmp
         for dst, src in pairwise(reversed(cycle)):
             ops += rename_ops(src, dst)
-    if need_tmpdir:
-        ops += rmdir_ops(tmpdir)
+    ops += remove_tmpdir(tmpdir)
     return ops
 
 def execute_operations(ops, args):
@@ -380,8 +398,7 @@ def dir_edit(args):
     input_file_list, output_file_list = get_file_lists(args, orig_cwd)
     renames, removals = generate_mapping(input_file_list, output_file_list)
     paths, cycles = decompose_mapping(renames)
-    need_tmpdir = cycles or mapping_needs_tmpdir(renames)
-    ops = generate_operations(paths, cycles, removals, need_tmpdir, args)
+    ops = generate_operations(paths, cycles, removals, args)
     execute_operations(ops, args)
 
 def main_throws(args=None):
@@ -428,8 +445,6 @@ changes.'''
                         default=False, help='remove non-empty directories recursively')
     parser.add_argument('-r', '--recursive', action='store_true', default=False,
                         help='list DIR recursively')
-    parser.add_argument('-S', '--safe', action='store_true',
-                        default=False, help='do not create or remove directories while renaming')
     parser.add_argument('-L', '--logfile', metavar='FILE',
                         type=argparse.FileType('w'), default=sys.stdout,
                         help='path to logfile for verbose mode (default: stdout)')
