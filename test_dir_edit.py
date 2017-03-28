@@ -42,6 +42,13 @@ def path_content(path):
         with open(path) as stream:
             return stream.read()
 
+def errno_regex(*codes):
+    """Return regular expression matching error messages for given errno codes."""
+    if os.name == 'nt':
+        # Do not deal with Windows error messages:
+        return '(.*)'
+    return '({})'.format('|'.join(re.escape(os.strerror(code)) for code in codes))
+
 def mkdir_p(path):
     """Like os.makedirs(), but ignores existing directories."""
     try:
@@ -162,9 +169,7 @@ class DirEditTestCase(unittest.TestCase):
         """Test internal function for coverage."""
         self.put_files('a/b')
         self.put_dirs('c/d')
-        regex_posix = re.escape(os.strerror(errno.EEXIST))
-        regex = '({}|Cannot create a file when that file already exists)'.format(regex_posix)
-        with self.assertRaisesRegex(OSError, regex):
+        with self.assertRaisesRegex(OSError, errno_regex(errno.EEXIST)):
             self.put_dirs('a/b')
         self.assertEqual([('a/b', 'a/b'), ('c/d/', '<dir>')], self.list_tmpdir_content())
 
@@ -224,17 +229,13 @@ class DirEditTestCase(unittest.TestCase):
 
     def test_nonexisting(self):
         """Raise error if directory does not exist."""
-        regex_posix = re.escape(os.strerror(errno.ENOENT))
-        regex = 'nonexist: .*({}|The system cannot find the file specified)'.format(regex_posix)
-        with self.assertRaisesRegex(dir_edit.Error, regex):
+        with self.assertRaisesRegex(dir_edit.Error, errno_regex(errno.ENOENT)):
             self.dir_edit(os.path.join(self.tmpdir, 'nonexist'))
 
     def test_nodirectory(self):
         """Raise error if path is no directory."""
         self.put_files('nodirectory')
-        regex_posix = re.escape(os.strerror(errno.ENOTDIR))
-        regex = 'nodirectory: .*({}|The directory name is invalid)'.format(regex_posix)
-        with self.assertRaisesRegex(dir_edit.Error, regex):
+        with self.assertRaisesRegex(dir_edit.Error, errno_regex(errno.ENOTDIR)):
             self.dir_edit(os.path.join(self.tmpdir, 'nodirectory'))
 
     def test_output(self):
@@ -260,9 +261,7 @@ class DirEditTestCase(unittest.TestCase):
         with self.assertRaisesRegex(dir_edit.Error, 'error reading input file'):
             self.dir_edit(self.tmpdir, '-i', os.path.join(self.tmpdir2, 'nonexist'))
         self.assertEqual(['a1', 'c2'], self.list_tmpdir())
-        regex_posix = re.escape(os.strerror(errno.ENOENT))
-        regex = '({}|The system cannot find the file specified)'.format(regex_posix)
-        with self.assertRaisesRegex(dir_edit.Error, regex):
+        with self.assertRaisesRegex(dir_edit.Error, errno_regex(errno.ENOENT)):
             self.dir_edit(self.tmpdir, '-i', self.tmpfile('nonexist'), '-o', self.tmpfile('foo'))
 
     def test_files(self):
@@ -272,9 +271,7 @@ class DirEditTestCase(unittest.TestCase):
         self.assertEqual(['a1', 'b2'], self.list_tmpdir())
         self.dir_edit(self.tmpdir, os.path.join(self.tmpdir, 'b2'), '-o', self.tmpfile('c2'))
         self.assertEqual(['a1', 'c2'], self.list_tmpdir())
-        regex_posix = re.escape(os.strerror(errno.ENOENT))
-        regex = '({}|The system cannot find the file specified)'.format(regex_posix)
-        with self.assertRaisesRegex(dir_edit.Error, regex):
+        with self.assertRaisesRegex(dir_edit.Error, errno_regex(errno.ENOENT)):
             self.dir_edit(self.tmpdir, 'nonexist', '-o', self.tmpfile('foo'))
 
     @unittest.skipIf(os.name == 'nt', 'newlines in files not supported on Windows')
@@ -557,10 +554,7 @@ class DirEditTestCase(unittest.TestCase):
     def test_operations_error(self):
         """Check that file system operation errors are handled correctly."""
         self.put_files('a', 'x')
-        codes = [errno.EEXIST, errno.ENOTDIR]
-        regex_posix = '|'.join(re.escape(os.strerror(code)) for code in codes)
-        regex = '({}|Cannot create a file when that file already exists)'.format(regex_posix)
-        with self.assertRaisesRegex(dir_edit.Error, regex):
+        with self.assertRaisesRegex(dir_edit.Error, errno_regex(errno.EEXIST, errno.ENOTDIR)):
             self.dir_edit(self.tmpdir, '-i', self.tmpfile('a'), '-o', self.tmpfile('x/y'))
         self.assertEqual(['a', 'x'], self.list_tmpdir())
 
@@ -642,11 +636,9 @@ class DirEditTestCase(unittest.TestCase):
 
     def test_multibyte_error(self):
         """Check that multibyte error message works."""
-        regex_posix = re.escape(os.strerror(errno.ENOENT))
-        regex = '({}|The system cannot find the file specified)'.format(regex_posix)
-        with self.assertRaisesRegex(dir_edit.Error, regex):
+        with self.assertRaisesRegex(dir_edit.Error, errno_regex(errno.ENOENT)):
             self.dir_edit(os.path.join(self.tmpdir, '\xc3\xa4'))
-        with self.assertRaisesRegex(dir_edit.Error, regex):
+        with self.assertRaisesRegex(dir_edit.Error, errno_regex(errno.ENOENT)):
             self.dir_edit(os.path.join(self.tmpdir, '\xe4'))
 
 @unittest.skipIf(os.name == 'nt', 'not yet supported on Windows')
