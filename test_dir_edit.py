@@ -557,7 +557,8 @@ class DirEditTestCase(unittest.TestCase):
     def test_operations_error(self):
         """Check that file system operation errors are handled correctly."""
         self.put_files('a', 'x')
-        regex_posix = re.escape(os.strerror(errno.EEXIST))
+        codes = [errno.EEXIST, errno.ENOTDIR]
+        regex_posix = '|'.join(re.escape(os.strerror(code)) for code in codes)
         regex = '({}|Cannot create a file when that file already exists)'.format(regex_posix)
         with self.assertRaisesRegex(dir_edit.Error, regex):
             self.dir_edit(self.tmpdir, '-i', self.tmpfile('a'), '-o', self.tmpfile('x/y'))
