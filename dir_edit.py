@@ -192,7 +192,7 @@ def decompose_mapping(mapping):
     mapping = mapping.copy()
     paths = {}
     cycles = {}
-    srcs = set(mapping.keys()) - set(mapping.values())
+    srcs = set(mapping.keys()) - set(mapping.values())  # set() for Python 2
     while mapping:
         try:
             src = srcs.pop()
