@@ -29,7 +29,7 @@ if sys.version_info < (3, 3):
     shlex.quote = pipes.quote
 
 class Error(Exception):
-    """Aborts program, used in test suite."""
+    """Abort program, used in test suite."""
     pass
 
 def pairwise(iterable):
