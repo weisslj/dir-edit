@@ -53,10 +53,8 @@ def mkdir_p(path):
     """Like os.makedirs(), but ignores existing directories."""
     try:
         os.makedirs(path)
-    except OSError as exc:
-        if exc.errno == errno.EEXIST and os.path.isdir(path):
-            pass
-        else:
+    except OSError:
+        if not os.path.isdir(path):
             raise
 
 def fake_sys_exit(arg=0):
