@@ -88,15 +88,16 @@ def rmtree_ops(path):
 def path_remove_ops(path, recursive=False):
     """Return operations for removing path, optionally recursive."""
     if os.path.islink(path) or not os.path.isdir(path):
-        return remove_ops(path)
+        ops = remove_ops(path)
     elif os.listdir(path):
         if recursive:
-            return rmtree_ops(path)
+            ops = rmtree_ops(path)
         else:
             warning('not removing directory %s: not empty (try -R)', path)
-            return []
+            ops = []
     else:
-        return rmdir_ops(path)
+        ops = rmdir_ops(path)
+    return ops
 
 def rename(src, dst):
     """Rename src path to dst, do not overwrite existing file."""
@@ -176,9 +177,10 @@ def read_dir_recursive(path, all_entries=False):
 def read_dir(path, args):
     """Return a list of paths in directory at path, possibly recursively."""
     if args.recursive:
-        return read_dir_recursive(path, args.all)
+        paths = read_dir_recursive(path, args.all)
     else:
-        return read_dir_flat(path, args.all)
+        paths = read_dir_flat(path, args.all)
+    return paths
 
 def normcase(path):
     """Normalize path case for cycle detection."""
