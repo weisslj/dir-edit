@@ -20,6 +20,7 @@ from io import StringIO
 import subprocess
 import random
 import string
+import logging
 
 import dir_edit
 
@@ -79,6 +80,7 @@ class DirEditTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """Add renamed member functions for Python 2.7."""
+        logging.basicConfig(format='%(module)s: %(message)s')
         if sys.version_info < (3, 2):
             cls.assertRegex = cls.assertRegexpMatches
             cls.assertRaisesRegex = cls.assertRaisesRegexp
@@ -139,6 +141,7 @@ class DirEditTestCase(unittest.TestCase):
         self.original_stderr.append(sys.stderr)
         sys.stdout = StringIO()
         sys.stderr = StringIO()
+        logging.getLogger().handlers[0].stream = sys.stderr
         self.stdout_buffer.append(sys.stdout)
         self.stderr_buffer.append(sys.stderr)
 
@@ -148,6 +151,7 @@ class DirEditTestCase(unittest.TestCase):
         self.error = self.stderr_buffer.pop().getvalue()
         sys.stdout = self.original_stdout.pop()
         sys.stderr = self.original_stderr.pop()
+        logging.getLogger().handlers[0].stream = sys.stderr
         sys.stdout.write(self.output)
         sys.stderr.write(self.error)
 

@@ -22,6 +22,7 @@ import shlex
 import pipes
 import random
 import itertools
+import logging
 
 if sys.version_info < (3, 2):
     os.fsencode = lambda filename: filename
@@ -38,13 +39,11 @@ def pairwise(iterable):
     next(it2, None)
     return zip(it1, it2)
 
-def warn(msg, *args, **kwargs):
+def warning(msg, *args, **kwargs):
     """Output a warning message to stderr."""
-    prog_name = os.path.basename(sys.argv[0])
-    msg = '{}: {}'.format(prog_name, msg.format(*args, **kwargs))
     if sys.version_info < (3, 0):
-        msg = msg.decode(errors='replace')  # pylint: disable=redefined-variable-type
-    print(msg, file=sys.stderr)
+        msg = msg.decode(errors='replace')
+    logging.warning(msg, *args, **kwargs)
 
 def cd_ops(path):
     """Return operations for changing current directory, only needed for verbose mode."""
@@ -94,7 +93,7 @@ def path_remove_ops(path, recursive=False):
         if recursive:
             return rmtree_ops(path)
         else:
-            warn('not removing directory {}: not empty (try -R)', path)
+            warning('not removing directory %s: not empty (try -R)', path)
             return []
     else:
         return rmdir_ops(path)
@@ -103,7 +102,7 @@ def rename(src, dst):
     """Rename src path to dst, do not overwrite existing file."""
     # This is of course not race-condition free:
     if os.path.lexists(dst):
-        warn('path {} already exists, skip', dst)
+        warning('path %s already exists, skip', dst)
         return
     os.rename(src, dst)
 
@@ -452,6 +451,8 @@ changes.'''
     parser.add_argument('-v', '--verbose', action='store_true', default=False,
                         help='output filesystem modifications to logfile')
     args = parser.parse_args(args)
+    # Use style='{' after Python 2 support is dropped:
+    logging.basicConfig(format='%(module)s: %(message)s')
     dir_edit(args)
 
 def main(args=None):
@@ -459,7 +460,7 @@ def main(args=None):
     try:
         main_throws(args)
     except Error as exc:
-        warn(str(exc))
+        logging.critical('%s', str(exc))
         sys.exit(1)
 
 if __name__ == '__main__':
