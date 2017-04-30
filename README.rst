@@ -30,25 +30,6 @@ News
 1.0    2010-05-06  First working version
 =====  ==========  ===========================================================
 
-Usage
------
-
-::
-
-  dir_edit [OPTION]... [DIR] [FILES]...
-
-    DIR        directory to edit (default: current directory)
-    FILES      limit to these filenames (default: all non-hidden in directory)
-
-  Some options:
-
-    -e CMD, --editor=CMD       use CMD to edit dirfile (default: $EDITOR or vi)
-    -d, --dry-run              don't perform any file system modifications
-    -v, --verbose              output filesystem modifications to stdout
-    -L FILE, --logfile FILE    path to logfile for verbose mode (default: stdout)
-    -i FILE, --input FILE      FILE containing paths to be edited
-
-
 Examples
 --------
 
@@ -70,6 +51,24 @@ Rename pictures with maximum directory depth 2::
 
   find pics -maxdepth 2 -type f -iregex ".*\.\(jpg\|png\)" > file_list
   dir_edit -i file_list
+
+Usage
+-----
+
+::
+
+  dir_edit [OPTION]... [DIR] [FILES]...
+
+    DIR        directory to edit (default: current directory)
+    FILES      limit to these filenames (default: all non-hidden in directory)
+
+  Some options:
+
+    -e CMD, --editor=CMD       use CMD to edit dirfile (default: $EDITOR or vi)
+    -d, --dry-run              don't perform any file system modifications
+    -v, --verbose              output filesystem modifications to stdout
+    -L FILE, --logfile FILE    path to logfile for verbose mode (default: stdout)
+    -i FILE, --input FILE      FILE containing paths to be edited
 
 Copyright
 =========
