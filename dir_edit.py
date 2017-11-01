@@ -29,9 +29,11 @@ if sys.version_info < (3, 2):
 if sys.version_info < (3, 3):
     shlex.quote = pipes.quote
 
+
 class Error(Exception):
     """Abort program, used in test suite."""
     pass
+
 
 def pairwise(iterable):
     """s -> (s0, s1), (s1, s2), (s2, s3), ..."""
@@ -39,19 +41,23 @@ def pairwise(iterable):
     next(it2, None)
     return zip(it1, it2)
 
+
 def warning(msg, *args, **kwargs):
     """Output a warning message to stderr."""
     if sys.version_info < (3, 0):
         msg = msg.decode(errors='replace')
     logging.warning(msg, *args, **kwargs)
 
+
 def cd_ops(path):
     """Return operations for changing current directory, only needed for verbose mode."""
     return [((None, 'cd'), (path,))]
 
+
 def rmdir_ops(path):
     """Return operations for removing empty directory."""
     return [((os.rmdir, 'rmdir'), (path,))]
+
 
 MAKEDIRS = os.makedirs
 if sys.version_info < (3, 4):
@@ -65,25 +71,31 @@ if sys.version_info < (3, 4):
                 raise
     MAKEDIRS = makedirs_compat
 
+
 def makedirs_exist_ok(path):
     """Like os.makedirs(), but ignores existing directories."""
     MAKEDIRS(path, exist_ok=True)
+
 
 def makedirs_ops(path):
     """Return operations for creating directory and all intermediate-level directories."""
     return [((makedirs_exist_ok, 'mkdir -p'), (path,))]
 
+
 def mkdir_ops(path):
     """Return operations for creating directory."""
     return [((os.mkdir, 'mkdir'), (path,))]
+
 
 def remove_ops(path):
     """Return operations for removing a file."""
     return [((os.remove, 'rm'), (path,))]
 
+
 def rmtree_ops(path):
     """Return operations for recursively removing a directory."""
     return [((shutil.rmtree, 'rm -r'), (path,))]
+
 
 def path_remove_ops(path, recursive=False):
     """Return operations for removing path, optionally recursive."""
@@ -99,6 +111,7 @@ def path_remove_ops(path, recursive=False):
         ops = rmdir_ops(path)
     return ops
 
+
 def rename(src, dst):
     """Rename src path to dst, do not overwrite existing file."""
     # This is of course not race-condition free:
@@ -107,11 +120,15 @@ def rename(src, dst):
         return
     os.rename(src, dst)
 
+
 def rename_ops(src, dst):
     """Return operations for renaming src path to dst."""
     return [((rename, 'mv -n'), (src, dst))]
 
+
 NUMKEY_REGEX = re.compile(r'(\s*[+-]?[0-9]+\.?[0-9]*\s*)(.*)')
+
+
 def numkey(string):
     """Return a sort key that works for filenames like '23 - foo'."""
     match = NUMKEY_REGEX.match(string)
@@ -119,17 +136,21 @@ def numkey(string):
         return float(match.group(1)), locale.strxfrm(match.group(2))
     return (0.0, locale.strxfrm(string))
 
+
 def path_split_all(path):
     """Return a list of path elements, e.g. 'a/b/..//c' -> ['a', 'c']."""
     return os.path.normpath(path).split(os.sep)
+
 
 def textkey_path(path):
     """Return a sort key for paths, respecting user locale setting."""
     return tuple(locale.strxfrm(s) for s in path_split_all(path))
 
+
 def numkey_path(path):
     """Return a sort key that works for paths like '2/23 - foo'."""
     return tuple(numkey(s) for s in path_split_all(path))
+
 
 def check_file_list(file_list):
     """Check that entries of file list exist, throw Error otherwise."""
@@ -139,6 +160,7 @@ def check_file_list(file_list):
     except OSError as exc:
         raise Error('{}: {}'.format(path, exc.strerror))
 
+
 def read_file_list(filename):
     """Read a file containing a single path per line, return list of paths.
     Can throw exception IOError.
@@ -146,10 +168,12 @@ def read_file_list(filename):
     with open(filename, 'r') as stream:
         return [line.rstrip('\r\n') for line in stream]
 
+
 def remove_hidden(names, all_entries=False):
     """Remove entries starting with a dot (.) from list of basenames."""
     if not all_entries:
         names[:] = [name for name in names if not name.startswith('.')]
+
 
 def read_dir_flat(path, all_entries=False):
     """Return a list of paths in directory at path. If all_entries is not
@@ -158,6 +182,7 @@ def read_dir_flat(path, all_entries=False):
     names = os.listdir(path)
     remove_hidden(names, all_entries)
     return names
+
 
 def read_dir_recursive(path, all_entries=False):
     """Return a list of paths in directory at path (recursively). If
@@ -174,6 +199,7 @@ def read_dir_recursive(path, all_entries=False):
         remove_hidden(dirs, all_entries)
     return paths
 
+
 def read_dir(path, args):
     """Return a list of paths in directory at path, possibly recursively."""
     if args.recursive:
@@ -182,12 +208,14 @@ def read_dir(path, args):
         paths = read_dir_flat(path, args.all)
     return paths
 
+
 def normcase(path):
     """Normalize path case for cycle detection."""
     if sys.platform == 'darwin':
         # On Mac OS X 'mv -n' is case-insensitive:
         return path.lower()
     return os.path.normcase(path)
+
 
 def decompose_mapping(mapping):
     """Decompose a mapping ('bijective' bipartite graph) into paths and cycles."""
@@ -212,6 +240,7 @@ def decompose_mapping(mapping):
             paths[src] = path
     return paths.values(), cycles.values()
 
+
 def make_relpath(path):
     """Return relative path to current directory, raise error if it leads outside."""
     try:
@@ -221,6 +250,7 @@ def make_relpath(path):
         return relpath
     except ValueError as exc:  # only on Windows, e.g. if drive letters differ
         raise Error('{}: {}'.format(path, exc))
+
 
 def generate_mapping(input_file_list, output_file_list):
     """Generate renames and removals from file lists."""
@@ -245,6 +275,7 @@ def generate_mapping(input_file_list, output_file_list):
         if src != dst:
             renames[src] = dst
     return renames, removals
+
 
 def get_file_list_from_user(file_list, args):
     """Return user-edited file_list or raise error."""
@@ -271,6 +302,7 @@ def get_file_list_from_user(file_list, args):
         os.remove(tmpfile)
         os.rmdir(tmpdir)
 
+
 def get_output_file_list(input_file_list, args):
     """Return output file list or raise error."""
     if args.output:
@@ -280,6 +312,7 @@ def get_output_file_list(input_file_list, args):
             raise Error('error reading output file: {}'.format(exc.strerror))
     else:
         return get_file_list_from_user(input_file_list, args)
+
 
 def get_input_file_list(args, orig_cwd):
     """Return input file list or raise error."""
@@ -306,6 +339,7 @@ def get_input_file_list(args, orig_cwd):
                 raise Error('file names with newlines are not supported, try -m!')
     return file_list
 
+
 def get_file_lists(args, orig_cwd):
     """Return input and output file list or raise error."""
     input_file_list = get_input_file_list(args, orig_cwd)
@@ -314,10 +348,12 @@ def get_file_lists(args, orig_cwd):
         raise Error('new file list has different length than old')
     return input_file_list, output_file_list
 
+
 def tmpname():
     """Return temporary file name."""
     characters = 'abcdefghijklmnopqrstuvwxyz0123456789_'
     return 'tmp_' + ''.join(random.choice(characters) for _ in range(20))
+
 
 def dirnames(path):
     """Yield all os.path.dirname()s."""
@@ -326,6 +362,7 @@ def dirnames(path):
         yield head
         head, _tail = os.path.split(head)
 
+
 def create_tmpdir(ops, tmpdir):
     """Append operations for creating temporary directory to ops, return path."""
     if not tmpdir:
@@ -333,9 +370,11 @@ def create_tmpdir(ops, tmpdir):
         ops += mkdir_ops(tmpdir)
     return tmpdir
 
+
 def remove_tmpdir(tmpdir):
     """Return operations for removing temporary directory."""
     return rmdir_ops(tmpdir) if tmpdir else []
+
 
 def generate_operations(paths, cycles, removals, args):
     """Generate file system operations."""
@@ -374,6 +413,7 @@ def generate_operations(paths, cycles, removals, args):
     ops += remove_tmpdir(tmpdir)
     return ops
 
+
 def execute_operations(ops, args):
     """Execute file system operations."""
     for (fun, cmd), fargs in ops:
@@ -390,6 +430,7 @@ def execute_operations(ops, args):
                 fun_call = fun.__name__ + '(' + ', '.join((repr(farg) for farg in fargs)) + ')'
                 raise Error(fun_call + ': ' + exc.strerror)
 
+
 def dir_edit(args):
     """Main functionality."""
     orig_cwd = os.getcwd()
@@ -403,18 +444,19 @@ def dir_edit(args):
     ops = generate_operations(paths, cycles, removals, args)
     execute_operations(ops, args)
 
+
 def main_throws(args=None):
     """Main function, throws exception on error."""
     # For locale-specific sorting of filenames:
     locale.setlocale(locale.LC_ALL, '')
     #
     usage = '%(prog)s [OPTION]... [DIR] [FILES]...'
-    desc = '''\
+    desc = """\
 Modify contents of DIR using an editor. Creates a temporary file, where every
 line is a filename in the directory DIR. Then an editor is started, enabling
 the user to rename or delete (blank line) entries. After saving, the script
 performs a consistency check, detects rename loops and finally executes the
-changes.'''
+changes."""
     #
     default_editor = 'vi'
     if os.name == 'nt':
@@ -457,6 +499,7 @@ changes.'''
     logging.basicConfig(format='%(module)s: %(message)s')
     dir_edit(args)
 
+
 def main(args=None):
     """Main function, exits program on error."""
     try:
@@ -464,6 +507,7 @@ def main(args=None):
     except Error as exc:
         logging.critical('%s', str(exc))
         sys.exit(1)
+
 
 if __name__ == '__main__':
     sys.exit(main())

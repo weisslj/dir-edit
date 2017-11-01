@@ -24,6 +24,7 @@ import logging
 
 import dir_edit
 
+
 def listdir_recursive(top):
     """Yield leaf nodes of 'top' directory recursively."""
     for root, dirs, files in os.walk(top):
@@ -32,6 +33,7 @@ def listdir_recursive(top):
             yield os.path.relpath(os.path.join(root, name), top).replace(os.sep, '/')
         if root != top and not dirs and not files:
             yield os.path.relpath(root, top).replace(os.sep, '/') + '/'
+
 
 def path_content(path):
     """Return file content or '<dir>' for directories."""
@@ -43,12 +45,14 @@ def path_content(path):
         with open(path) as stream:
             return stream.read()
 
+
 def errno_regex(*codes):
     """Return regular expression matching error messages for given errno codes."""
     if os.name == 'nt':
         # Do not deal with Windows error messages:
         return '(.*)'
     return '({})'.format('|'.join(re.escape(os.strerror(code)) for code in codes))
+
 
 def mkdir_p(path):
     """Like os.makedirs(), but ignores existing directories."""
@@ -58,9 +62,11 @@ def mkdir_p(path):
         if not os.path.isdir(path):
             raise
 
+
 def fake_sys_exit(arg=0):
     """Raise exception instead of exiting, for testing."""
     raise Exception('sys.exit({!r})'.format(arg))
+
 
 def dir_edit_external(*args):
     """Call dir_edit.py as external process."""
@@ -71,6 +77,7 @@ def dir_edit_external(*args):
         shell = True
     return subprocess.check_output([prog] + list(args), stderr=subprocess.STDOUT, shell=shell,
                                    universal_newlines=True)
+
 
 class DirEditTestCase(unittest.TestCase):
     # pylint: disable=too-many-instance-attributes,too-many-public-methods
@@ -643,6 +650,7 @@ class DirEditTestCase(unittest.TestCase):
         with self.assertRaisesRegex(dir_edit.Error, errno_regex(errno.ENOENT)):
             self.dir_edit(os.path.join(self.tmpdir, '\xe4'))
 
+
 @unittest.skipIf(os.name == 'nt', 'not yet supported on Windows')
 class DirEditDryRunVerboseTestCase(DirEditTestCase):
     """Test dir_edit.py -d -v."""
@@ -657,12 +665,15 @@ class DirEditDryRunVerboseTestCase(DirEditTestCase):
                                     stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as exc:
             raise dir_edit.Error(exc.output)
+
     def test_dry_run(self):
         """Not necessary here."""
         pass
+
     def test_verbose_logfile(self):
         """Not necessary here."""
         pass
+
 
 if __name__ == '__main__':
     unittest.main(buffer=True, catchbreak=True)
