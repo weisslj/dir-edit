@@ -39,11 +39,10 @@ def path_content(path):
     """Return file content or '<dir>' for directories."""
     if os.path.islink(path):
         return '-> ' + os.readlink(path)
-    elif os.path.isdir(path):
+    if os.path.isdir(path):
         return '<dir>'
-    else:
-        with open(path) as stream:
-            return stream.read()
+    with open(path) as stream:
+        return stream.read()
 
 
 def errno_regex(*codes):
