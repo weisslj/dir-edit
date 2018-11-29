@@ -32,7 +32,6 @@ if sys.version_info < (3, 3):
 
 class Error(Exception):
     """Abort program, used in test suite."""
-    pass
 
 
 def pairwise(iterable):

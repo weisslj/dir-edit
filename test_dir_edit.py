@@ -667,11 +667,9 @@ class DirEditDryRunVerboseTestCase(DirEditTestCase):
 
     def test_dry_run(self):
         """Not necessary here."""
-        pass
 
     def test_verbose_logfile(self):
         """Not necessary here."""
-        pass
 
 
 if __name__ == '__main__':
