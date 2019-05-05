@@ -472,7 +472,7 @@ changes."""
     parser.add_argument('-a', '--all', action='store_true', default=False,
                         help='include entries starting with . (besides . and ..)')
     parser.add_argument('-d', '--dry-run', action='store_true',
-                        default=False, help='don\'t perform any file system modifications')
+                        default=False, help="don't perform any file system modifications")
     parser.add_argument('-e', '--editor', metavar='CMD', default=default_editor,
                         help='use CMD to edit dirfile (default: $EDITOR or vi)')
     parser.add_argument('-i', '--input', metavar='FILE',

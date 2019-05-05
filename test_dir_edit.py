@@ -225,7 +225,7 @@ class DirEditTestCase(unittest.TestCase):
             'python -c "'
             'from sys import argv as a;'
             's = open(a[3]).read();'
-            'open(a[3], \'w\').write(s.replace(a[1], a[2]))'
+            "open(a[3], 'w').write(s.replace(a[1], a[2]))"
             '"'
         )
         self.dir_edit(self.tmpdir, '-e', pysed + ' a b')
