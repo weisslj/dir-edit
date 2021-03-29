@@ -23,14 +23,14 @@ finally performs the changes.
 News
 ----
 
-=====  ==========  ===========================================================
+=====  ==========  ==================================================================
 2.1.0  2017-05-01  Support renaming of intermediate dirs in recursive mode,
                    drop ``--safe`` mode, small bugfixes
 2.0.0  2017-03-22  Bugfixes, Python 3 support, ``-o`` and ``-L`` option,
                    extensive test suite
 1.1    2010-11-21  Bugfixes
 1.0    2010-05-06  First working version
-=====  ==========  ===========================================================
+=====  ==========  ==================================================================
 
 Examples
 --------
