@@ -157,7 +157,7 @@ def check_file_list(file_list):
         for path in file_list:
             os.lstat(path)
     except OSError as exc:
-        raise Error('{}: {}'.format(path, exc.strerror))
+        raise Error('{}: {}'.format(path, exc.strerror)) from exc
 
 
 def read_file_list(filename):
@@ -248,7 +248,7 @@ def make_relpath(path):
             raise Error('error, path {} leads outside given directory'.format(path))
         return relpath
     except ValueError as exc:  # only on Windows, e.g. if drive letters differ
-        raise Error('{}: {}'.format(path, exc))
+        raise Error('{}: {}'.format(path, exc)) from exc
 
 
 def generate_mapping(input_file_list, output_file_list):
@@ -295,8 +295,8 @@ def get_file_list_from_user(file_list, args):
         subprocess.check_call(command, shell=True)
         with open(tmpfile, 'r') as stream:
             return [line.rstrip('\r\n') for line in stream]
-    except subprocess.CalledProcessError:
-        raise Error('editor command failed: {}'.format(command))
+    except subprocess.CalledProcessError as exc:
+        raise Error('editor command failed: {}'.format(command)) from exc
     finally:
         os.remove(tmpfile)
         os.rmdir(tmpdir)
@@ -308,7 +308,7 @@ def get_output_file_list(input_file_list, args):
         try:
             return read_file_list(args.output)
         except IOError as exc:
-            raise Error('error reading output file: {}'.format(exc.strerror))
+            raise Error('error reading output file: {}'.format(exc.strerror)) from exc
     else:
         return get_file_list_from_user(input_file_list, args)
 
@@ -319,7 +319,7 @@ def get_input_file_list(args, orig_cwd):
         try:
             file_list = read_file_list(args.input)
         except IOError as exc:
-            raise Error('error reading input file: {}'.format(exc.strerror))
+            raise Error('error reading input file: {}'.format(exc.strerror)) from exc
         check_file_list(file_list)
     elif args.files:
         file_list = []
@@ -427,7 +427,7 @@ def execute_operations(ops, args):
                 fun(*fargs)
             except OSError as exc:
                 fun_call = fun.__name__ + '(' + ', '.join((repr(farg) for farg in fargs)) + ')'
-                raise Error(fun_call + ': ' + exc.strerror)
+                raise Error(fun_call + ': ' + exc.strerror) from exc
 
 
 def dir_edit(args):
@@ -436,7 +436,7 @@ def dir_edit(args):
     try:
         os.chdir(args.dir)
     except OSError as exc:
-        raise Error('{}: {}'.format(args.dir, exc.strerror))
+        raise Error('{}: {}'.format(args.dir, exc.strerror)) from exc
     input_file_list, output_file_list = get_file_lists(args, orig_cwd)
     renames, removals = generate_mapping(input_file_list, output_file_list)
     paths, cycles = decompose_mapping(renames)
