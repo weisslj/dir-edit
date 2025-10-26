@@ -9,7 +9,6 @@
 
 """Rename or remove files in a directory using an editor."""
 
-from __future__ import print_function
 import sys
 import os
 import re
@@ -19,15 +18,9 @@ import subprocess
 import argparse
 import shutil
 import shlex
-import pipes
 import random
 import itertools
 import logging
-
-if sys.version_info < (3, 2):
-    os.fsencode = lambda filename: filename
-if sys.version_info < (3, 3):
-    shlex.quote = pipes.quote
 
 
 class Error(Exception):
@@ -58,22 +51,9 @@ def rmdir_ops(path):
     return [((os.rmdir, 'rmdir'), (path,))]
 
 
-MAKEDIRS = os.makedirs
-if sys.version_info < (3, 4):
-    def makedirs_compat(name, exist_ok=False, **kwargs):
-        """Compatibility function with Python 3.4 os.makedirs()."""
-        try:
-            os.makedirs(name, **kwargs)
-        except OSError:
-            # This is broken in Python 3.2 and 3.3, cf. https://bugs.python.org/issue13498
-            if not exist_ok or not os.path.isdir(name):
-                raise
-    MAKEDIRS = makedirs_compat
-
-
 def makedirs_exist_ok(path):
     """Like os.makedirs(), but ignores existing directories."""
-    MAKEDIRS(path, exist_ok=True)
+    os.makedirs(path, exist_ok=True)
 
 
 def makedirs_ops(path):
@@ -221,7 +201,7 @@ def decompose_mapping(mapping):
     mapping = mapping.copy()
     paths = {}
     cycles = {}
-    srcs = set(mapping.keys()) - set(mapping.values())  # set() for Python 2
+    srcs = mapping.keys() - mapping.values()
     while mapping:
         try:
             src = srcs.pop()
@@ -494,8 +474,7 @@ changes."""
     parser.add_argument('-v', '--verbose', action='store_true', default=False,
                         help='output filesystem modifications to logfile')
     args = parser.parse_args(args)
-    # Use style='{' after Python 2 support is dropped:
-    logging.basicConfig(format='%(module)s: %(message)s')
+    logging.basicConfig(format='{module}: {message}', style='{')
     dir_edit(args)
 
 

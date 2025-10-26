@@ -53,15 +53,6 @@ def errno_regex(*codes):
     return '({})'.format('|'.join(re.escape(os.strerror(code)) for code in codes))
 
 
-def mkdir_p(path):
-    """Like os.makedirs(), but ignores existing directories."""
-    try:
-        os.makedirs(path)
-    except OSError:
-        if not os.path.isdir(path):
-            raise
-
-
 def fake_sys_exit(arg=0):
     """Raise exception instead of exiting, for testing."""
     raise Exception('sys.exit({!r})'.format(arg))
@@ -85,11 +76,8 @@ class DirEditTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        """Add renamed member functions for Python 2.7."""
-        logging.basicConfig(format='%(module)s: %(message)s')
-        if sys.version_info < (3, 2):
-            cls.assertRegex = cls.assertRegexpMatches
-            cls.assertRaisesRegex = cls.assertRaisesRegexp
+        """Setup logging."""
+        logging.basicConfig(format='{module}: {message}', style='{')
 
     def setUp(self):
         """Create temporary directories, declare attributes."""
@@ -113,7 +101,7 @@ class DirEditTestCase(unittest.TestCase):
         """Put files into the temporary directory."""
         for filename in filenames:
             path = os.path.join(self.tmpdir, filename)
-            mkdir_p(os.path.dirname(path))
+            os.makedirs(os.path.dirname(path), exist_ok=True)
             with open(path, 'w') as stream:
                 stream.write(filename)
 
@@ -121,7 +109,7 @@ class DirEditTestCase(unittest.TestCase):
         """Put directories into the temporary directory."""
         for dirname in dirnames:
             path = os.path.join(self.tmpdir, dirname)
-            mkdir_p(path)
+            os.makedirs(path, exist_ok=True)
 
     def tmpfile(self, *filenames):
         """Create a temporary file with list of filenames, return path."""
