@@ -213,7 +213,7 @@ class DirEditTestCase(unittest.TestCase):
         """Check that the '--version' option works."""
         here = os.path.abspath(os.path.dirname(__file__))
         setup_prog = os.path.join(here, 'setup.py')
-        version = subprocess.check_output(['python', setup_prog, '--version'],
+        version = subprocess.check_output(['python3', setup_prog, '--version'],
                                           universal_newlines=True)
         version_output = dir_edit_external('--version')
         self.assertRegex(version_output, '^dir_edit.py ' + re.escape(version))
@@ -222,7 +222,7 @@ class DirEditTestCase(unittest.TestCase):
         """Check that '-e' and '--editor' options work."""
         self.put_files('a1', 'a2')
         pysed = (
-            'python -c "'
+            'python3 -c "'
             'from sys import argv as a;'
             's = open(a[3]).read();'
             "open(a[3], 'w').write(s.replace(a[1], a[2]))"
@@ -233,7 +233,7 @@ class DirEditTestCase(unittest.TestCase):
         self.dir_edit(self.tmpdir, '--editor', pysed + ' b c')
         self.assertEqual(['c1', 'c2'], self.list_tmpdir())
         with self.assertRaisesRegex(dir_edit.Error, 'editor command failed'):
-            self.dir_edit(self.tmpdir, '-e' 'python -c "exit(1)"')
+            self.dir_edit(self.tmpdir, '-e' 'python3 -c "exit(1)"')
 
     def test_nonexisting(self):
         """Raise error if directory does not exist."""
@@ -288,10 +288,10 @@ class DirEditTestCase(unittest.TestCase):
         self.put_files('a\r\n1', 'a\n\n2')
         with self.assertRaisesRegex(dir_edit.Error, 'file names with newlines are not supported'):
             self.dir_edit(self.tmpdir)
-        self.dir_edit(self.tmpdir, '-m', '-e', 'python -c "exit(0)"')
+        self.dir_edit(self.tmpdir, '-m', '-e', 'python3 -c "exit(0)"')
         self.assertEqual(['a 1', 'a 2'], self.list_tmpdir())
         self.put_files('a\r3')
-        self.dir_edit(self.tmpdir, '--mangle-newlines', '-e', 'python -c "exit(0)"')
+        self.dir_edit(self.tmpdir, '--mangle-newlines', '-e', 'python3 -c "exit(0)"')
         self.assertEqual(['a 1', 'a 2', 'a 3'], self.list_tmpdir())
 
     def test_same_length(self):
