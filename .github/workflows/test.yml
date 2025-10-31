@@ -21,3 +21,5 @@ jobs:
         run: flake8
       - name: Install package
         run: python setup.py -q install
+      - name: Run test
+        run: python test_dir_edit.py
