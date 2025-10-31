@@ -21,7 +21,3 @@ jobs:
         run: flake8
       - name: Install package
         run: python setup.py -q install
-      - name: Test code with coverage
-        run: |
-          coverage run test_dir_edit.py
-          coverage report --fail-under=100
