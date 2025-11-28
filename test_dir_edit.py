@@ -55,7 +55,7 @@ def errno_regex(*codes):
 
 def fake_sys_exit(arg=0):
     """Raise exception instead of exiting, for testing."""
-    raise Exception('sys.exit({!r})'.format(arg))
+    raise RuntimeError('sys.exit({!r})'.format(arg))
 
 
 def dir_edit_external(*args):
@@ -178,7 +178,7 @@ class DirEditTestCase(unittest.TestCase):
         """Test main function for coverage."""
         original_sys_exit = sys.exit
         sys.exit = fake_sys_exit
-        with self.assertRaisesRegex(Exception, r'^sys.exit\(0\)$'):
+        with self.assertRaisesRegex(RuntimeError, r'^sys.exit\(0\)$'):
             dir_edit.main(['--help'])
         sys.exit = original_sys_exit
 
@@ -186,7 +186,7 @@ class DirEditTestCase(unittest.TestCase):
         """Test main function error for coverage."""
         original_sys_exit = sys.exit
         sys.exit = fake_sys_exit
-        with self.assertRaisesRegex(Exception, r'^sys.exit\(1\)$'):
+        with self.assertRaisesRegex(RuntimeError, r'^sys.exit\(1\)$'):
             dir_edit.main([os.path.join(self.tmpdir, 'nonexist')])
         sys.exit = original_sys_exit
 
@@ -221,7 +221,7 @@ class DirEditTestCase(unittest.TestCase):
         self.dir_edit(self.tmpdir, '--editor', pysed + ' b c')
         self.assertEqual(['c1', 'c2'], self.list_tmpdir())
         with self.assertRaisesRegex(dir_edit.Error, 'editor command failed'):
-            self.dir_edit(self.tmpdir, '-e' 'python3 -c "exit(1)"')
+            self.dir_edit(self.tmpdir, '-e', 'python3 -c "exit(1)"')
 
     def test_nonexisting(self):
         """Raise error if directory does not exist."""
@@ -566,7 +566,13 @@ class DirEditTestCase(unittest.TestCase):
         """Check that existing destination error is handled in recursive mode."""
         self.put_files('a/x', 'b/y')
         self.setup_stdout()
-        self.dir_edit(self.tmpdir, os.path.join(self.tmpdir, 'a'), '-r', '-o', self.tmpfile('b/y'))
+        try:
+            self.dir_edit(
+                self.tmpdir, os.path.join(self.tmpdir, 'a'), '-r', '-o', self.tmpfile('b/y'))
+        except dir_edit.Error as exc:
+            if 'mv: not replacing' not in str(exc):
+                # new coreutils `mv -n` has exit code 1
+                raise
         self.restore_stdout()
         self.assertEqual([('a/x', 'a/x'), ('b/y', 'b/y')], self.list_tmpdir_content())
         regex = '(path b{}y already exists, skip|)'.format(re.escape(os.sep))
@@ -576,7 +582,12 @@ class DirEditTestCase(unittest.TestCase):
         """Check that existing destination error is handled."""
         self.put_files('a', 'b')
         self.setup_stdout()
-        self.dir_edit(self.tmpdir, '-i', self.tmpfile('a'), '-o', self.tmpfile('b'))
+        try:
+            self.dir_edit(self.tmpdir, '-i', self.tmpfile('a'), '-o', self.tmpfile('b'))
+        except dir_edit.Error as exc:
+            if 'mv: not replacing' not in str(exc):
+                # new coreutils `mv -n` has exit code 1
+                raise
         self.restore_stdout()
         self.assertEqual([('a', 'a'), ('b', 'b')], self.list_tmpdir_content())
         self.assertRegex(self.error, '(path b already exists, skip|)')

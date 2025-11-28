@@ -7,3 +7,7 @@ reports=no
 
 # Expect LF line ending, forbid CRLF:
 expected-line-ending-format=LF
+
+[MESSAGES CONTROL]
+
+disable=consider-using-f-string,unspecified-encoding,useless-option-value,consider-using-with
