@@ -24,6 +24,7 @@ News
 ----
 
 =====  ==========  ==================================================================
+3.1.0  2025-11-28  Require Python 3.9, small test fixes
 3.0.0  2021-03-29  Require Python 3.6 (no new features, just usage of "try ... from")
 2.1.0  2017-05-01  Support renaming of intermediate dirs in recursive mode,
                    drop ``--safe`` mode, small bugfixes
