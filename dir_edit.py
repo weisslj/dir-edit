@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2010-2021 Johannes Weißl
+# Copyright (C) 2010-2025 Johannes Weißl
 # License GPLv3+:
 # GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
 # This is free software: you are free to change and redistribute it.
